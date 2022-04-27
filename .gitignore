@@ -80,6 +80,9 @@ env
 .env.production.local
 .env.local
 
+# results
+user
+
 # pycache
 __pycache__
 
