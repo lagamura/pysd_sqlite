@@ -30,7 +30,7 @@ def post_simul_csv(db:Session, model_details: schema.Simul_test):
 
     model = pysd.load(model_path[0])
     df = model.run()
-
+    
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
     csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
