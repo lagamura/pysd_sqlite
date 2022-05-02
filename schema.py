@@ -1,9 +1,11 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 class Simulcsv_Base(BaseModel):
     id: int
     name: str
     csv_path: str
+    date: datetime
 
     class Config:
         orm_mode = True

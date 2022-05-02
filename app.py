@@ -1,13 +1,15 @@
-import imp
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
+
 from sqlalchemy.orm import Session
 
+import json
 import os
 import crud
 import models
 import schema
 from database import SessionLocal, engine
+
 
 
 
@@ -26,15 +28,31 @@ def get_db():
     finally:
         db.close()
 
+@app.get('/get_available_models')
+def get_available_models():
+    # this should go to initalization
+    '''
+    with open('json_models.json', 'w') as outfile:
+        json.dump(os.listdir('models'), outfile)
+    '''
+    try:
+        models_list = os.listdir('models')
+        return models_list
+    except Exception as e:
+        raise Exception(e)
+
 @app.get('/get_all_csvs', response_model=list[schema.Simulcsv_Base])
 def get_all_csvs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     csv_list = crud.get_all_csvs(db=db, skip=skip, limit=limit)
     return csv_list
 
+@app.get('/get_simuls', response_model= list[schema.Simulcsv_Base])
+def get_simuls(db: Session = Depends(get_db)):
+    return crud.get_simuls(db)
+
 @app.get('/get_simul_by_id/{id}', response_model= schema.Simulcsv_Base)
 def get_simul_by_id(id:int, db: Session = Depends(get_db)):
     obj = crud.get_simul_by_id(db=db, key_id=id)
-    print(f"my obj is :{obj} \n")
     #input("Await------------------------\n")
     return(obj)
 

@@ -4,16 +4,18 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 
 
-Base = declarative_base()
+
 engine = create_engine("sqlite:///foo.db", future=True,connect_args={"check_same_thread": False}) #echo can be used for logging
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
 
 
 Base.metadata.create_all(engine)
 
 
-###### ------------------------------------- watch out the correct order 1.declare base 2. engine creation 3.create all ######
+###### -------- watch out the correct order 1.declare base 2. engine creation 3.create all ######
 
 def database_init():
     pass
