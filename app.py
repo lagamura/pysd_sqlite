@@ -1,9 +1,9 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.orm import Session
 
-import json
 import os
 import crud
 import models
@@ -19,6 +19,21 @@ app = FastAPI(
     title = "Simulation_PySD_Manager",
     description = "Performe CRUD operations on csv files by using this API",
     version = "0.0.1"
+)
+
+origins = [
+"*"
+]
+
+allow_origin_regex = ['.*localhost.*',"http://localhost:3000/.*"]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 def get_db():

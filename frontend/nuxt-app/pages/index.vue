@@ -18,8 +18,12 @@
         </div>
       </div>
     </div>
+    <div class="row mb-3">
+      <ResultsGraph />
+    </div>
 </template>
 
 <script setup>
+import ResultsGraph from '~~/components/ResultsGraph.vue';
 const { data } = await useFetch("http://127.0.0.1:8000/get_available_models");
 </script>
