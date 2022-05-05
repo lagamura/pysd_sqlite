@@ -8,13 +8,13 @@
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="#">Home</a>
+          <router-link class="nav-link" to="/">Home</router-link>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="Simulations-History">Simulations History</a>
+          <router-link class="nav-link" to="/history">Simulations History</router-link>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="New-Simulation">New Simulation</a>
+          <router-link class="nav-link" to="new-simulation">New Simulation</router-link>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -35,4 +35,9 @@
     </div>
   </div>
 </nav>
+<router-view/>
 </template>
+
+<script setup>
+ 
+</script>
