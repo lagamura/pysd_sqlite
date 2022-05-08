@@ -19,5 +19,6 @@ app.component(
 
 app.use(router)
 app.mount("#app")
+document.title = "PySims"
 
 //import "bootstrap/dist/js/bootstrap.js";

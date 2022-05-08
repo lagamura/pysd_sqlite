@@ -1,10 +1,10 @@
 <template>
-      <div class="list-group">
+    <div class="list-group">
         <h3>List of Available Models</h3>
         <a v-for="model in models" :key="model.id">
-          {{ model }}
+            {{ model }}
         </a>
-      </div>
+    </div>
 </template>
 
 <script>

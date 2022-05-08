@@ -1,8 +1,18 @@
 <template>
-  <div>
-    <NavVue/>
-  </div>
   <div class="container pt-5">
-      <h2>New simulation run to be created</h2>
+      <h3 class="pb-5">Create a new simulation</h3>
+    <div class="row mb-3">
+      <div class="col-md-4 themed-grid-col">
+      <ListAvailableModels/>
+      </div>
+      <div class="col-md-4 themed-grid-col">
+      <ResultsGraph/>
+      </div>
+    </div>
   </div>
 </template>
+
+<script setup>
+  import ListAvailableModels from '../components/ListAvailableModels.vue';
+  import ResultsGraph from '../components/ResultsGraph.vue';
+</script>

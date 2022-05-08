@@ -1,300 +1,302 @@
-
 """
-Python model ../../models/SD_Fever/SIR_Simple.py
-Translated using PySD version 0.6.3
+Python model 'SIR_Simple.py'
+Translated using PySD
 """
-from __future__ import division
-import numpy as np
-from pysd import utils
-import xarray as xr
 
-from pysd.functions import cache
-from pysd import functions
+from pathlib import Path
+
+from pysd.py_backend.statefuls import Integ
+
+__pysd_version__ = "2.2.4"
+
+__data = {"scope": None, "time": lambda: 0}
+
+_root = Path(__file__).parent
 
 _subscript_dict = {}
 
 _namespace = {
-    'total population': 'total_population',
-    'contact infectivity': 'contact_infectivity',
-    'susceptible': 'susceptible',
-    'infect': 'infect',
-    'TIME STEP': 'time_step',
-    'SAVEPER': 'saveper',
-    'infectious': 'infectious',
-    'cumulative cases': 'cumulative_cases',
-    'report case': 'report_case',
-    'FINAL TIME': 'final_time',
-    'recovery period': 'recovery_period',
-    'recover': 'recover',
-    'INITIAL TIME': 'initial_time',
-    'recovered': 'recovered'}
+    "TIME": "time",
+    "Time": "time",
+    "cumulative cases": "cumulative_cases",
+    "report case": "report_case",
+    "infect": "infect",
+    "contact infectivity": "contact_infectivity",
+    "recovery period": "recovery_period",
+    "infectious": "infectious",
+    "recovered": "recovered",
+    "recover": "recover",
+    "susceptible": "susceptible",
+    "total population": "total_population",
+    "FINAL TIME": "final_time",
+    "INITIAL TIME": "initial_time",
+    "SAVEPER": "saveper",
+    "TIME STEP": "time_step",
+}
+
+_dependencies = {
+    "cumulative_cases": {"_integ_cumulative_cases": 1},
+    "report_case": {"infect": 1},
+    "infect": {
+        "susceptible": 1,
+        "infectious": 1,
+        "total_population": 1,
+        "contact_infectivity": 1,
+    },
+    "contact_infectivity": {},
+    "recovery_period": {},
+    "infectious": {"_integ_infectious": 1},
+    "recovered": {"_integ_recovered": 1},
+    "recover": {"infectious": 1, "recovery_period": 1},
+    "susceptible": {"_integ_susceptible": 1},
+    "total_population": {},
+    "final_time": {},
+    "initial_time": {},
+    "saveper": {"time_step": 1},
+    "time_step": {},
+    "_integ_cumulative_cases": {"initial": {}, "step": {"report_case": 1}},
+    "_integ_infectious": {"initial": {}, "step": {"infect": 1, "recover": 1}},
+    "_integ_recovered": {"initial": {}, "step": {"recover": 1}},
+    "_integ_susceptible": {"initial": {"total_population": 1}, "step": {"infect": 1}},
+}
+
+##########################################################################
+#                            CONTROL VARIABLES                           #
+##########################################################################
+
+_control_vars = {
+    "initial_time": lambda: 0,
+    "final_time": lambda: 100,
+    "time_step": lambda: 0.5,
+    "saveper": lambda: time_step(),
+}
 
 
-def _init_cumulative_cases():
-    """
-    Implicit
-    --------
-    (_init_cumulative_cases)
-    See docs for cumulative_cases
-    Provides initial conditions for cumulative_cases function
-    """
-    return 0
+def _init_outer_references(data):
+    for key in data:
+        __data[key] = data[key]
 
 
-@cache('run')
+def time():
+    return __data["time"]()
+
+
 def final_time():
     """
-    FINAL TIME
-    ----------
-    (final_time)
-    Day
+    Real Name: FINAL TIME
+    Original Eqn: 100
+    Units: Day
+    Limits: (None, None)
+    Type: constant
+    Subs: None
+
     The final time for the simulation.
     """
-    return 100
+    return __data["time"].final_time()
 
 
-@cache('run')
-def contact_infectivity():
-    """
-    contact infectivity
-    -------------------
-    (contact_infectivity)
-    Persons/Persons/Day
-    A joint parameter listing both how many people you contact, and how likely
-                you are to give them the disease.
-    """
-    return 0.7
-
-
-@cache('run')
 def initial_time():
     """
-    INITIAL TIME
-    ------------
-    (initial_time)
-    Day
+    Real Name: INITIAL TIME
+    Original Eqn: 0
+    Units: Day
+    Limits: (None, None)
+    Type: constant
+    Subs: None
+
     The initial time for the simulation.
     """
-    return 0
+    return __data["time"].initial_time()
 
 
-@cache('run')
-def time_step():
-    """
-    TIME STEP
-    ---------
-    (time_step)
-    Day [0,?]
-    The time step for the simulation.
-    """
-    return 0.5
-
-
-@cache('step')
-def recover():
-    """
-    recover
-    -------
-    (recover)
-    Persons/Day
-
-    """
-    return infectious() / recovery_period()
-
-
-def _init_recovered():
-    """
-    Implicit
-    --------
-    (_init_recovered)
-    See docs for recovered
-    Provides initial conditions for recovered function
-    """
-    return 0
-
-
-@cache('run')
-def total_population():
-    """
-    total population
-    ----------------
-    (total_population)
-    Persons
-    This is just a simplification to make it easer to track how many folks
-                there are without having to sum up all the stocks.
-    """
-    return 1000
-
-
-@cache('step')
-def susceptible():
-    """
-    susceptible
-    -----------
-    (susceptible)
-    Persons
-    The population that has not yet been infected.
-    """
-    return _state['susceptible']
-
-
-def _init_infectious():
-    """
-    Implicit
-    --------
-    (_init_infectious)
-    See docs for infectious
-    Provides initial conditions for infectious function
-    """
-    return 5
-
-
-@cache('step')
-def _dinfectious_dt():
-    """
-    Implicit
-    --------
-    (_dinfectious_dt)
-    See docs for infectious
-    Provides derivative for infectious function
-    """
-    return infect() - recover()
-
-
-@cache('step')
-def _dcumulative_cases_dt():
-    """
-    Implicit
-    --------
-    (_dcumulative_cases_dt)
-    See docs for cumulative_cases
-    Provides derivative for cumulative_cases function
-    """
-    return report_case()
-
-
-@cache('step')
-def _dsusceptible_dt():
-    """
-    Implicit
-    --------
-    (_dsusceptible_dt)
-    See docs for susceptible
-    Provides derivative for susceptible function
-    """
-    return -infect()
-
-
-@cache('step')
-def recovered():
-    """
-    recovered
-    ---------
-    (recovered)
-    Persons
-    These people have recovered from the disease. Yay! Nobody dies in this
-                model.
-    """
-    return _state['recovered']
-
-
-@cache('step')
-def infect():
-    """
-    infect
-    ------
-    (infect)
-    Persons/Day
-
-    """
-    return susceptible() * (infectious() / total_population()) * contact_infectivity()
-
-
-@cache('step')
-def cumulative_cases():
-    """
-    cumulative cases
-    ----------------
-    (cumulative_cases)
-
-
-    """
-    return _state['cumulative_cases']
-
-
-@cache('run')
-def recovery_period():
-    """
-    recovery period
-    ---------------
-    (recovery_period)
-    Days
-    How long are you infectious for?
-    """
-    return 5
-
-
-@cache('step')
-def infectious():
-    """
-    infectious
-    ----------
-    (infectious)
-    Persons
-    The population with the disease, manifesting symptoms, and able to
-                transmit it to other people.
-    """
-    return _state['infectious']
-
-
-@cache('step')
-def _drecovered_dt():
-    """
-    Implicit
-    --------
-    (_drecovered_dt)
-    See docs for recovered
-    Provides derivative for recovered function
-    """
-    return recover()
-
-
-@cache('step')
 def saveper():
     """
-    SAVEPER
-    -------
-    (saveper)
-    Day [0,?]
+    Real Name: SAVEPER
+    Original Eqn: TIME STEP
+    Units: Day
+    Limits: (0.0, None)
+    Type: component
+    Subs: None
+
     The frequency with which output is stored.
     """
-    return time_step()
+    return __data["time"].saveper()
 
 
-def _init_susceptible():
+def time_step():
     """
-    Implicit
-    --------
-    (_init_susceptible)
-    See docs for susceptible
-    Provides initial conditions for susceptible function
+    Real Name: TIME STEP
+    Original Eqn: 0.5
+    Units: Day
+    Limits: (0.0, None)
+    Type: constant
+    Subs: None
+
+    The time step for the simulation.
     """
-    return total_population()
+    return __data["time"].time_step()
 
 
-@cache('step')
+##########################################################################
+#                             MODEL VARIABLES                            #
+##########################################################################
+
+
+def cumulative_cases():
+    """
+    Real Name: cumulative cases
+    Original Eqn: INTEG ( report case, 0)
+    Units:
+    Limits: (None, None)
+    Type: component
+    Subs: None
+
+
+    """
+    return _integ_cumulative_cases()
+
+
 def report_case():
     """
-    report case
-    -----------
-    (report_case)
+    Real Name: report case
+    Original Eqn: infect
+    Units:
+    Limits: (None, None)
+    Type: component
+    Subs: None
 
 
     """
     return infect()
 
 
-def time():
-    return _t
-functions.time = time
-functions.initial_time = initial_time
+def infect():
+    """
+    Real Name: infect
+    Original Eqn: susceptible*(infectious/total population) * contact infectivity
+    Units: Persons/Day
+    Limits: (None, None)
+    Type: component
+    Subs: None
+
+
+    """
+    return susceptible() * (infectious() / total_population()) * contact_infectivity()
+
+
+def contact_infectivity():
+    """
+    Real Name: contact infectivity
+    Original Eqn: 0.7
+    Units: Persons/Persons/Day
+    Limits: (None, None)
+    Type: constant
+    Subs: None
+
+    A joint parameter listing both how many people you contact, and how likely
+        you are to give them the disease.
+    """
+    return 0.7
+
+
+def recovery_period():
+    """
+    Real Name: recovery period
+    Original Eqn: 5
+    Units: Days
+    Limits: (None, None)
+    Type: constant
+    Subs: None
+
+    How long are you infectious for?
+    """
+    return 5
+
+
+def infectious():
+    """
+    Real Name: infectious
+    Original Eqn: INTEG ( infect-recover, 5)
+    Units: Persons
+    Limits: (None, None)
+    Type: component
+    Subs: None
+
+    The population with the disease, manifesting symptoms, and able to
+        transmit it to other people.
+    """
+    return _integ_infectious()
+
+
+def recovered():
+    """
+    Real Name: recovered
+    Original Eqn: INTEG ( recover, 0)
+    Units: Persons
+    Limits: (None, None)
+    Type: component
+    Subs: None
+
+    These people have recovered from the disease. Yay! Nobody dies in this
+        model.
+    """
+    return _integ_recovered()
+
+
+def recover():
+    """
+    Real Name: recover
+    Original Eqn: infectious/recovery period
+    Units: Persons/Day
+    Limits: (None, None)
+    Type: component
+    Subs: None
+
+
+    """
+    return infectious() / recovery_period()
+
+
+def susceptible():
+    """
+    Real Name: susceptible
+    Original Eqn: INTEG ( -infect, total population)
+    Units: Persons
+    Limits: (None, None)
+    Type: component
+    Subs: None
+
+    The population that has not yet been infected.
+    """
+    return _integ_susceptible()
+
+
+def total_population():
+    """
+    Real Name: total population
+    Original Eqn: 1000
+    Units: Persons
+    Limits: (None, None)
+    Type: constant
+    Subs: None
+
+    This is just a simplification to make it easer to track how many folks
+        there are without having to sum up all the stocks.
+    """
+    return 1000
+
+
+_integ_cumulative_cases = Integ(
+    lambda: report_case(), lambda: 0, "_integ_cumulative_cases"
+)
+
+
+_integ_infectious = Integ(lambda: infect() - recover(), lambda: 5, "_integ_infectious")
+
+
+_integ_recovered = Integ(lambda: recover(), lambda: 0, "_integ_recovered")
+
+
+_integ_susceptible = Integ(
+    lambda: -infect(), lambda: total_population(), "_integ_susceptible"
+)

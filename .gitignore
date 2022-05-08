@@ -138,3 +138,6 @@ dist
 
 # my files
 pack.py
+
+# ignore front-end directory
+frontend-vue/

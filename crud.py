@@ -1,3 +1,4 @@
+from wsgiref.handlers import read_environ
 import pysd
 import pandas as pd
 
@@ -6,6 +7,8 @@ import pathlib
 import os
 from os import path
 
+from sqlalchemy import false, null
+
 from database import engine
 from sqlalchemy.orm import Session
 
@@ -13,7 +16,6 @@ import models
 import schema
 
 def get_simuls(db:Session):
-    #return models.Simul_csv.query.all()
     res = db.query(models.Simul_csv).all()
     return res
 
@@ -27,14 +29,22 @@ def get_simul_by_id(db:Session, key_id:int ):
 def post_simul_csv(db:Session, model_details: schema.Simul_test):
     #user_choice = input("Type the model you want to execute: ")
     fileDir = f'./models/{model_details.model_name}'
-    fileExt = r'*.py'
-    model_path = list(pathlib.Path(fileDir).glob(fileExt))
 
     if (not path.exists(fileDir)):
         raise Exception("There is not such a name model")
 
-    model = pysd.load(model_path[0])
+    fileExt = r'*.py'
+    model_path = list(pathlib.Path(fileDir).glob(fileExt))        
+    #print (model_path)
+    if (model_path):
+        model = pysd.load(model_path[0])
+    else:
+        fileExt = r'*.mdl'
+        model_path = list(pathlib.Path(fileDir).glob(fileExt))
+        model = pysd.read_vensim(model_path)
+
     df = model.run()
+    result = df.to_json(orient="split") #creation of json_field stored in sqlite3
     
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
@@ -43,8 +53,12 @@ def post_simul_csv(db:Session, model_details: schema.Simul_test):
     datetime_field = datetime.now(tz=None).strftime("%Y-%m-%dT%H:%M:%S")
     # create db entry
 
-    simulation_res_csv = models.Simul_csv(name = model_details.model_name, csv_path = csv_path, date = datetime_field)
+    simulation_res_csv = models.Simul_csv(name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
     db.add(simulation_res_csv)
+
+   
+    
+
     db.commit()
     print(f'Id is: {simulation_res_csv.id}')
 

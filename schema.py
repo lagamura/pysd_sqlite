@@ -1,11 +1,13 @@
+from cgitb import text
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Json
 
 class Simulcsv_Base(BaseModel):
     id: int
     name: str
     csv_path: str
     date: datetime
+    json_data: Json
 
     class Config:
         orm_mode = True

@@ -15,7 +15,6 @@
 </template>
 
 <script>
-import NavVue from "@/components/NavVue.vue";
 import TableVue from "@/components/TableVue.vue";
 import axios from "axios";
 import ListAvailableModels from "../components/ListAvailableModels.vue";
@@ -37,7 +36,6 @@ export default {
     })
   },
   components: {
-    NavVue,
     TableVue,
     ListAvailableModels
 },

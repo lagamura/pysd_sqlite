@@ -76,6 +76,10 @@ def get_csv_by_id(id:int, db: Session = Depends(get_db)):
     file_path = crud.get_simul_by_id(db=db, key_id=id).csv_path
     return FileResponse(file_path)
 
+@app.get('/get_simul_res_json/{id}')
+def get_simul_res_json(id:int, db: Session = Depends(get_db)):
+    row = crud.get_simul_by_id(db=db, key_id=id)
+    return(row.json_data)
 
 
 @app.get('/get_simul_by_name', response_model= schema.Simulcsv_Base)
@@ -88,7 +92,6 @@ def get_csv_by_name(simul: schema.Get_Simul_by_name, db: Session = Depends(get_d
     if os.path.exists(file_path):
         return FileResponse(file_path)
     return {"error" :"File not found!"}
-
 
 
 @app.post('/add_new_csv', response_model=schema.Simulcsv_Base)
