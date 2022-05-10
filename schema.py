@@ -2,7 +2,7 @@ from cgitb import text
 from datetime import datetime
 from pydantic import BaseModel, Json
 
-class Simulcsv_Base(BaseModel):
+class Simulation(BaseModel):
     id: int
     name: str
     csv_path: str
@@ -12,7 +12,7 @@ class Simulcsv_Base(BaseModel):
     class Config:
         orm_mode = True
 
-class Simulcsv_add(Simulcsv_Base):
+class Simul_add(Simulation):
     pass
 
 class Simul_test(BaseModel):

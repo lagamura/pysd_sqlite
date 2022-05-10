@@ -16,14 +16,14 @@ import models
 import schema
 
 def get_simuls(db:Session):
-    res = db.query(models.Simul_csv).all()
+    res = db.query(models.Simulation).all()
     return res
 
 def get_simul_by_name(db:Session, name_query: str):
-    return db.query(models.Simul_csv).filter(models.Simul_csv.model_name == name_query).first()
+    return db.query(models.Simulation).filter(models.Simulation.model_name == name_query).first()
     
 def get_simul_by_id(db:Session, key_id:int ):
-    return db.query(models.Simul_csv).filter(models.Simul_csv.id == key_id).first()
+    return db.query(models.Simulation).filter(models.Simulation.id == key_id).first()
 
 
 def post_simul_csv(db:Session, model_details: schema.Simul_test):
@@ -44,7 +44,7 @@ def post_simul_csv(db:Session, model_details: schema.Simul_test):
         model = pysd.read_vensim(model_path)
 
     df = model.run()
-    result = df.to_json(orient="split") #creation of json_field stored in sqlite3
+    result = df.to_json(orient="columns") #creation of json_field stored in sqlite3
     
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
@@ -53,7 +53,7 @@ def post_simul_csv(db:Session, model_details: schema.Simul_test):
     datetime_field = datetime.now(tz=None).strftime("%Y-%m-%dT%H:%M:%S")
     # create db entry
 
-    simulation_res_csv = models.Simul_csv(name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
+    simulation_res_csv = models.Simulation(name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
     db.add(simulation_res_csv)
 
    
@@ -68,7 +68,7 @@ def post_simul_csv(db:Session, model_details: schema.Simul_test):
 def get_csv_by_id(db:Session, id_query:int):
     with db(engine) as session:
 
-        res = session.query(models.Simul_csv).get(id_query)
+        res = session.query(models.Simulation).get(id_query)
         pd_fetched = pd.read_csv(res.csv_path)
     
     return(pd_fetched)
@@ -78,7 +78,7 @@ def get_csv_by_id(db:Session, id_query:int):
 def get_csv_by_name(db:Session, name_query:str):
     with db(engine) as session:
 
-        res = session.query(models.Simul_csv).get(name_query)
+        res = session.query(models.Simulation).get(name_query)
         if res:
             #pd_fetched = pd.read_csv(res.csv_path)
             return(res.csv_path)
@@ -87,12 +87,12 @@ def get_csv_by_name(db:Session, name_query:str):
 
 
 def get_all_csvs(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Simul_csv).offset(skip).limit(limit).all()
+    return db.query(models.Simulation).offset(skip).limit(limit).all()
 
 def delete_csv_by_id(db: Session, key_id:int):
 
     try:
-        db.query(models.Simul_csv).filter(models.Simul_csv.id == key_id).delete()
+        db.query(models.Simulation).filter(models.Simulation.id == key_id).delete()
         db.commit()
     except Exception as e:
         raise Exception(e)

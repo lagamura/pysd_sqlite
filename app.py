@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import JSON
 
 from sqlalchemy.orm import Session
 
@@ -56,16 +57,16 @@ def get_available_models():
     except Exception as e:
         raise Exception(e)
 
-@app.get('/get_all_csvs', response_model=list[schema.Simulcsv_Base])
+@app.get('/get_all_csvs', response_model=list[schema.Simulation])
 def get_all_csvs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     csv_list = crud.get_all_csvs(db=db, skip=skip, limit=limit)
     return csv_list
 
-@app.get('/get_simuls', response_model= list[schema.Simulcsv_Base])
+@app.get('/get_simuls', response_model= list[schema.Simulation])
 def get_simuls(db: Session = Depends(get_db)):
     return crud.get_simuls(db)
 
-@app.get('/get_simul_by_id/{id}', response_model= schema.Simulcsv_Base)
+@app.get('/get_simul_by_id/{id}', response_model= schema.Simulation)
 def get_simul_by_id(id:int, db: Session = Depends(get_db)):
     obj = crud.get_simul_by_id(db=db, key_id=id)
     #input("Await------------------------\n")
@@ -76,13 +77,14 @@ def get_csv_by_id(id:int, db: Session = Depends(get_db)):
     file_path = crud.get_simul_by_id(db=db, key_id=id).csv_path
     return FileResponse(file_path)
 
-@app.get('/get_simul_res_json/{id}')
+@app.get('/get_simul_res_json/{id}', response_class=JSONResponse)
 def get_simul_res_json(id:int, db: Session = Depends(get_db)):
     row = crud.get_simul_by_id(db=db, key_id=id)
-    return(row.json_data)
+    #print(row.json_data)
+    return JSONResponse(content=row.json_data)
 
 
-@app.get('/get_simul_by_name', response_model= schema.Simulcsv_Base)
+@app.get('/get_simul_by_name', response_model= schema.Simulation)
 def get_simul_by_name(simul: schema.Get_Simul_by_name, db: Session = Depends(get_db)):
     return(crud.get_simul_by_name(db=db, model_details=simul.name))
 
@@ -94,7 +96,7 @@ def get_csv_by_name(simul: schema.Get_Simul_by_name, db: Session = Depends(get_d
     return {"error" :"File not found!"}
 
 
-@app.post('/add_new_csv', response_model=schema.Simulcsv_Base)
+@app.post('/add_new_csv', response_model=schema.Simulation)
 def add_new_csv(simul: schema.Simul_test, db: Session = Depends(get_db)):
     return (crud.post_simul_csv(db=db, model_details=simul))
 

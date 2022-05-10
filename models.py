@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, JSON
 from database import Base
 
-class Simul_csv(Base):
+class Simulation(Base):
 
     __tablename__ = "simul_csv"
 
