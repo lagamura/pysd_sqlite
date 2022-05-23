@@ -52,8 +52,8 @@ def post_simul_csv(db:Session, model_details: schema.Simul_test):
     df.to_csv(csv_path)
     datetime_field = datetime.now(tz=None).strftime("%Y-%m-%dT%H:%M:%S")
     # create db entry
-
-    simulation_res_csv = models.Simulation(name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
+    
+    simulation_res_csv = models.Simulation(simulation_name= model_details.simulation_name, model_name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
     db.add(simulation_res_csv)
 
    
