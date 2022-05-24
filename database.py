@@ -17,11 +17,5 @@ Base.metadata.create_all(engine)
 
 ###### -------- watch out the correct order 1.declare base 2. engine creation 3.create all ######
 
-def database_init():
-    pass
-       
 
-''' #create new entry on db
-with engine.begin() as connection:
-    stocks.to_sql('mekokpesko', con=connection, if_exists='append') ### Warning about sqlconnection
-'''
+    

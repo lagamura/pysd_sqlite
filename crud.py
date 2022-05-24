@@ -7,13 +7,38 @@ import pathlib
 import os
 from os import path
 
-from sqlalchemy import false, null
-
 from database import engine
 from sqlalchemy.orm import Session
 
 import models
 import schema
+
+def database_init(db:Session):
+    
+    models_list = os.listdir('models')
+    for model_name in models_list:
+
+        fileDir = f'./models/{model_name}'
+
+        if (not path.exists(fileDir)):
+            raise Exception("There is not such a name model")
+
+        fileExt = r'*.py'
+        model_path = list(pathlib.Path(fileDir).glob(fileExt))        
+        #print (model_path)
+        if (model_path):
+            model = pysd.load(model_path[0])
+        else:
+            fileExt = r'*.mdl'
+            model_path = list(pathlib.Path(fileDir).glob(fileExt))
+            model = pysd.read_vensim(model_path)
+        model_res = models.ModelsNamespace(id_name = model_name, namespace = model.namespace)
+        db.add(model_res) 
+
+        db.commit()
+        
+    return("Successfull Initialization")
+        
 
 def get_simuls(db:Session):
     res = db.query(models.Simulation).all()
@@ -26,7 +51,7 @@ def get_simul_by_id(db:Session, key_id:int ):
     return db.query(models.Simulation).filter(models.Simulation.id == key_id).first()
 
 
-def post_simul_csv(db:Session, model_details: schema.Simul_test):
+def post_simul(db:Session, model_details: schema.Simul_test):
     #user_choice = input("Type the model you want to execute: ")
     fileDir = f'./models/{model_details.model_name}'
 
@@ -53,16 +78,13 @@ def post_simul_csv(db:Session, model_details: schema.Simul_test):
     datetime_field = datetime.now(tz=None).strftime("%Y-%m-%dT%H:%M:%S")
     # create db entry
     
-    simulation_res_csv = models.Simulation(simulation_name= model_details.simulation_name, model_name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
-    db.add(simulation_res_csv)
-
-   
-    
+    simulation_res = models.Simulation(simulation_name= model_details.simulation_name, model_name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
+    db.add(simulation_res) 
 
     db.commit()
-    print(f'Id is: {simulation_res_csv.id}')
+    print(f'Id is: {simulation_res.id}')
 
-    return(simulation_res_csv)
+    return(simulation_res)
 
 ### WARNING THIS FUNCTION HAS NOT SCHEMA MODEL ###
 def get_csv_by_id(db:Session, id_query:int):
@@ -89,7 +111,7 @@ def get_csv_by_name(db:Session, name_query:str):
 def get_all_csvs(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Simulation).offset(skip).limit(limit).all()
 
-def delete_csv_by_id(db: Session, key_id:int):
+def delete_simul_by_id(db: Session, key_id:int):
 
     try:
         db.query(models.Simulation).filter(models.Simulation.id == key_id).delete()

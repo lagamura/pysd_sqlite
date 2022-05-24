@@ -44,6 +44,7 @@ def get_db():
     finally:
         db.close()
 
+
 @app.get('/get_available_models')
 def get_available_models():
     # this should go to initalization
@@ -96,12 +97,12 @@ def get_csv_by_name(simul: schema.Get_Simul_by_name, db: Session = Depends(get_d
     return {"error" :"File not found!"}
 
 
-@app.post('/add_new_csv', response_model=schema.Simulation)
-def add_new_csv(simul: schema.Simul_test, db: Session = Depends(get_db)):
-    return (crud.post_simul_csv(db=db, model_details=simul))
+@app.post('/add_new_simulation', response_model=schema.Simulation)
+def add_new_simulation(simul: schema.Simul_test, db: Session = Depends(get_db)):
+    return (crud.post_simul(db=db, model_details=simul))
 
-@app.delete('/delete_csv_by_id', response_description="deleted successfully")
-def delete_csv_by_id(key_id:int, db: Session = Depends(get_db)):
+@app.delete('/delete_simul_by_id', response_description="deleted successfully")
+def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):
     res = crud.get_simul_by_id(db=db, key_id=key_id)
 
 

@@ -28,3 +28,7 @@ class Get_Simul_by_name(BaseModel):
 
     class Config:
         orm_mode = True
+
+class Models(BaseModel):
+    id_name: str
+    namespace: Json
