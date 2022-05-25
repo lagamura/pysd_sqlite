@@ -1,6 +1,6 @@
 # from xmlrpc.client import DateTime
-from sqlalchemy import Column, Integer, String, ARRAY, JSON, DateTime
-from database import Base
+from sqlalchemy import Column, Integer, String, JSON, DateTime
+from database import Base, SessionLocal
 from datetime import datetime
 
 class Simulation(Base):
@@ -23,3 +23,6 @@ class ModelsNamespace(Base):
 
     id_name = Column(String, primary_key=True)
     namespace = Column(JSON)
+
+
+
