@@ -1,343 +1,892 @@
+"""
+Python model 'Subscripted Population Model.py'
+Translated using PySD
+"""
 
-from __future__ import division
+from pathlib import Path
 import numpy as np
-from pysd import functions
+import xarray as xr
 
+from pysd.py_backend.statefuls import DelayN, Integ
+from pysd import Component
+
+__pysd_version__ = "3.0.0"
+
+__data = {"scope": None, "time": lambda: 0}
+
+_root = Path(__file__).parent
+
+
+_subscript_dict = {
+    "Towns": [
+        "Abington",
+        "Acton",
+        "Acushnet",
+        "Adams",
+        "Agawam",
+        "Alford",
+        "Amesbury",
+        "Amherst",
+        "Andover",
+        "Aquinnah",
+        "Arlington",
+        "Ashburnham",
+        "Ashby",
+        "Ashfield",
+        "Ashland",
+        "Athol",
+        "Attleboro",
+        "Auburn",
+        "Avon",
+        "Ayer",
+        "Barnstable",
+        "Barre",
+        "Becket",
+        "Bedford",
+        "Belchertown",
+        "Bellingham",
+        "Belmont",
+        "Berkley",
+        "Berlin",
+        "Bernardston",
+        "Beverly",
+        "Billerica",
+        "Blackstone",
+        "Blandford",
+        "Bolton",
+        "Boston",
+        "Bourne",
+        "Boxborough",
+        "Boxford",
+        "Boylston",
+        "Braintree",
+        "Brewster",
+        "Bridgewater",
+        "Brimfield",
+        "Brockton",
+        "Brookfield",
+        "Brookline",
+        "Buckland",
+        "Burlington",
+        "Cambridge",
+        "Canton",
+        "Carlisle",
+        "Carver",
+        "Charlemont",
+        "Charlton",
+        "Chatham",
+        "Chelmsford",
+        "Chelsea",
+        "Cheshire",
+        "Chester",
+        "Chesterfield",
+        "Chicopee",
+        "Chilmark",
+        "Clarksburg",
+        "Clinton",
+        "Cohasset",
+        "Colrain",
+        "Concord",
+        "Conway",
+        "Cummington",
+        "Dalton",
+        "Danvers",
+        "Dartmouth",
+        "Dedham",
+        "Deerfield",
+        "Dennis",
+        "Dighton",
+        "Douglas",
+        "Dover",
+        "Dracut",
+        "Dudley",
+        "Dunstable",
+        "Duxbury",
+        "East Bridgewater",
+        "East Brookfield",
+        "East Longmeadow",
+        "Eastham",
+        "Easthampton",
+        "Easton",
+        "Edgartown",
+        "Egremont",
+        "Erving",
+        "Essex",
+        "Everett",
+        "Fairhaven",
+        "Fall River",
+        "Falmouth",
+        "Fitchburg",
+        "Florida",
+        "Foxborough",
+        "Framingham",
+        "Franklin",
+        "Freetown",
+        "Gardner",
+        "Georgetown",
+        "Gill",
+        "Gloucester",
+        "Goshen",
+        "Gosnold",
+        "Grafton",
+        "Granby",
+        "Granville",
+        "Great Barrington",
+        "Greenfield",
+        "Groton",
+        "Groveland",
+        "Hadley",
+        "Halifax",
+        "Hamilton",
+        "Hampden",
+        "Hancock",
+        "Hanover",
+        "Hanson",
+        "Hardwick",
+        "Harvard",
+        "Harwich",
+        "Hatfield",
+        "Haverhill",
+        "Hawley",
+        "Heath",
+        "Hingham",
+        "Hinsdale",
+        "Holbrook",
+        "Holden",
+        "Holland",
+        "Holliston",
+        "Holyoke",
+        "Hopedale",
+        "Hopkinton",
+        "Hubbardston",
+        "Hudson",
+        "Hull",
+        "Huntington",
+        "Ipswich",
+        "Kingston",
+        "Lakeville",
+        "Lancaster",
+        "Lanesborough",
+        "Lawrence",
+        "Lee",
+        "Leicester",
+        "Lenox",
+        "Leominster",
+        "Leverett",
+        "Lexington",
+        "Leyden",
+        "Lincoln",
+        "Littleton",
+        "Longmeadow",
+        "Lowell",
+        "Ludlow",
+        "Lunenburg",
+        "Lynn",
+        "Lynnfield",
+        "Malden",
+        "Manchester by the Sea",
+        "Mansfield",
+        "Marblehead",
+        "Marion",
+        "Marlborough",
+        "Marshfield",
+        "Mashpee",
+        "Mattapoisett",
+        "Maynard",
+        "Medfield",
+        "Medford",
+        "Medway",
+        "Melrose",
+        "Mendon",
+        "Merrimac",
+        "Methuen",
+        "Middleborough",
+        "Middlefield",
+        "Middleton",
+        "Milford",
+        "Millbury",
+        "Millis",
+        "Millville",
+        "Milton",
+        "Monroe",
+        "Monson",
+        "Montague",
+        "Monterey",
+        "Montgomery",
+        "Mount Washington",
+        "Nahant",
+        "Nantucket",
+        "Natick",
+        "Needham",
+        "New Ashford",
+        "New Bedford",
+        "New Braintree",
+        "New Marlborough",
+        "New Salem",
+        "Newbury",
+        "Newburyport",
+        "Newton",
+        "Norfolk",
+        "North Adams",
+        "North Andover",
+        "North Attleborough",
+        "North Brookfield",
+        "North Reading",
+        "Northampton",
+        "Northborough",
+        "Northbridge",
+        "Northfield",
+        "Norton",
+        "Norwell",
+        "Norwood",
+        "Oak Bluffs",
+        "Oakham",
+        "Orange",
+        "Orleans",
+        "Otis",
+        "Oxford",
+        "Palmer",
+        "Paxton",
+        "Peabody",
+        "Pelham",
+        "Pembroke",
+        "Pepperell",
+        "Peru",
+        "Petersham",
+        "Phillipston",
+        "Pittsfield",
+        "Plainfield",
+        "Plainville",
+        "Plymouth",
+        "Plympton",
+        "Princeton",
+        "Provincetown",
+        "Quincy",
+        "Randolph",
+        "Raynham",
+        "Reading",
+        "Rehoboth",
+        "Revere",
+        "Richmond",
+        "Rochester",
+        "Rockland",
+        "Rockport",
+        "Rowe",
+        "Rowley",
+        "Royalston",
+        "Russell",
+        "Rutland",
+        "Salem",
+        "Salisbury",
+        "Sandisfield",
+        "Sandwich",
+        "Saugus",
+        "Savoy",
+        "Scituate",
+        "Seekonk",
+        "Sharon",
+        "Sheffield",
+        "Shelburne",
+        "Sherborn",
+        "Shirley",
+        "Shrewsbury",
+        "Shutesbury",
+        "Somerset",
+        "Somerville",
+        "South Hadley",
+        "Southampton",
+        "Southborough",
+        "Southbridge",
+        "Southwick",
+        "Spencer",
+        "Springfield",
+        "Sterling",
+        "Stockbridge",
+        "Stoneham",
+        "Stoughton",
+        "Stow",
+        "Sturbridge",
+        "Sudbury",
+        "Sunderland",
+        "Sutton",
+        "Swampscott",
+        "Swansea",
+        "Taunton",
+        "Templeton",
+        "Tewksbury",
+        "Tisbury",
+        "Tolland",
+        "Topsfield",
+        "Townsend",
+        "Truro",
+        "Tyngsborough",
+        "Tyringham",
+        "Upton",
+        "Uxbridge",
+        "Wakefield",
+        "Wales",
+        "Walpole",
+        "Waltham",
+        "Ware",
+        "Wareham",
+        "Warren",
+        "Warwick",
+        "Washington",
+        "Watertown",
+        "Wayland",
+        "Webster",
+        "Wellesley",
+        "Wellfleet",
+        "Wendell",
+        "Wenham",
+        "West Boylston",
+        "West Bridgewater",
+        "West Brookfield",
+        "West Newbury",
+        "West Springfield",
+        "West Stockbridge",
+        "West Tisbury",
+        "Westborough",
+        "Westfield",
+        "Westford",
+        "Westhampton",
+        "Westminster",
+        "Weston",
+        "Westport",
+        "Westwood",
+        "Weymouth",
+        "Whately",
+        "Whitman",
+        "Wilbraham",
+        "Williamsburg",
+        "Williamstown",
+        "Wilmington",
+        "Winchendon",
+        "Winchester",
+        "Windsor",
+        "Winthrop",
+        "Woburn",
+        "Worcester",
+        "Worthington",
+        "Wrentham",
+        "Yarmouth",
+    ]
+}
+
+component = Component()
+
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
+
+_control_vars = {
+    "initial_time": lambda: 0,
+    "final_time": lambda: 20,
+    "time_step": lambda: 1,
+    "saveper": lambda: time_step(),
+}
+
+
+def _init_outer_references(data):
+    for key in data:
+        __data[key] = data[key]
+
+
+@component.add(name="Time")
 def time():
-    return _t
-
-# Share the `time` function with the module for `step`, `pulse`, etc.
-functions.__builtins__.update({'time':time})
-
-
-def initial_population():
     """
-    
+    Current time of the model.
     """
-    loc_dimension_dir = initial_population.dimension_dir 
-    output = np.ndarray(())
-    output[] = 15985,21924,10303,8485,28438,494,16283,37819,33201,311,42844,6081,3074,1737,16593,11584,43593,16188,4356,7427,45193,5398,1779,13320,14649,16332,24729,6411,2866,2129,39502,40243,9026,1233,4897,617660,19754,4996,7965,4355,35744,9820,26563,3609,93810,3390,58732,1902,24498,105162,21561,4852,11509,1266,12981,6125,33802,35177,3235,1337,1222,55298,866,1702,13606,7542,1671,17668,1897,872,6756,26493,34032,24729,5125,14207,7086,8471,5589,29457,11390,3179,15059,13794,2183,15720,4956,16053,23112,4067,1225,1800,3504,41667,15873,88857,31531,40318,752,16865,68318,31635,8870,20228,8183,1500,28789,1054,75,17765,6240,1566,7104,17456,10646,6459,5250,7518,7764,5139,717,13879,10209,2990,6520,12243,3279,60879,337,706,22157,2032,10791,17346,2481,13547,39880,5911,14925,4382,19063,10293,2180,13175,12629,10602,8055,3091,76377,5943,10970,5025,40759,1851,31394,711,6362,8924,15784,106519,21103,10086,90329,11596,59450,5136,23184,19808,4907,38499,25132,14006,6045,10106,12024,56173,12752,26983,5839,6338,47255,23116,521,8987,27999,13261,7891,3190,27003,121,8560,8437,961,838,167,3410,10172,33006,28886,228,95072,999,1509,990,6666,17416,85146,11227,13708,28352,28712,4680,14892,28549,14155,15707,3032,19031,10506,28602,4527,1902,7839,5890,1612,13709,12140,4806,51251,1321,17837,11497,847,1234,1682,44737,648,8264,56468,2820,3413,2942,92271,32112,13383,24747,11608,51755,1475,5232,17489,6952,393,5856,1258,1775,7973,41340,8283,915,20675,26628,692,18133,13722,17612,3257,1893,4119,7211,35608,1771,18165,75754,17514,5792,9767,16719,9502,11688,153060,7808,1947,21437,26962,6590,9268,17659,3684,8963,13787,15865,55874,8013,28961,3949,485,6085,8926,2003,11292,327,7542,13457,24932,1838,24070,60632,9872,21822,5135,780,538,31915,12994,16767,27982,2750,848,4875,7669,6916,3701,4235,28391,1306,2740,18272,41094,21951,1607,7277,11261,15532,14618,53743,1496,14489,14219,2482,7754,22325,10300,21374,899,17497,38120,181045,1156,10955,23793
+    return __data["time"]()
 
-    return output
-initial_population.dimension_dir = {}
 
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_1_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)[]
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_2_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_3_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_4_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_5_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_6_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_7_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_8_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_9_of_9():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8()/(1.*lifespan()/8)
-
-    return output
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_1_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_2_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_1_of_8.dimension_dir = {}
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_2_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_3_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_2_of_8.dimension_dir = {}
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_3_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_4_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_3_of_8.dimension_dir = {}
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_4_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_5_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_4_of_8.dimension_dir = {}
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_5_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_6_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_5_of_8.dimension_dir = {}
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_6_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_7_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_6_of_8.dimension_dir = {}
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_7_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_8_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_7_of_8.dimension_dir = {}
-
-def functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8():
-    return _state['functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8']
-
-def _functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8_init():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]/lifespan() * (lifespan() / 8)*np.ones(())
-
-def _dfunctions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8_dt():
-    try:
-        loc_dimension_dir = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_8_of_9() - functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_9_of_9()
-functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_stock_8_of_8.dimension_dir = {}
-
-def deaths():
-    """
-    
-    """
-    loc_dimension_dir = deaths.dimension_dir 
-    output = np.ndarray(())
-    output[] = functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)_delay_lifespan_flow_9_of_9
-
-    return output
-deaths.dimension_dir = {}
-
-def population():
-    return _state['population']
-
-def _population_init():
-    try:
-        loc_dimension_dir = population.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(initial_population(),initial_population.dimension_dir,loc_dimension_dir,_subscript_dict)[]*np.ones(())
-
-def _dpopulation_dt():
-    try:
-        loc_dimension_dir = population.dimension_dir
-    except:
-        loc_dimension_dir = 0
-    return functions.shorthander(births(),births.dimension_dir,loc_dimension_dir,_subscript_dict)[]-functions.shorthander(deaths(),deaths.dimension_dir,loc_dimension_dir,_subscript_dict)[]
-population.dimension_dir = {}
-
-def birthrate():
-    """
-    
-    """
-    loc_dimension_dir = birthrate.dimension_dir 
-    output = np.ndarray(())
-    output[] = 0.1
-
-    return output
-birthrate.dimension_dir = {}
-
-def births():
-    """
-    
-    """
-    loc_dimension_dir = births.dimension_dir 
-    output = np.ndarray(())
-    output[] = functions.shorthander(birthrate(),birthrate.dimension_dir,loc_dimension_dir,_subscript_dict)[]*functions.shorthander(population(),population.dimension_dir,loc_dimension_dir,_subscript_dict)[]
-
-    return output
-births.dimension_dir = {}
-
-def lifespan():
-    """
-    
-    """
-    loc_dimension_dir = 0 
-    output = 70
-
-    return output
-
+@component.add(
+    name="FINAL TIME", units="Month", comp_type="Constant", comp_subtype="Normal"
+)
 def final_time():
     """
-    
+    The final time for the simulation.
     """
-    loc_dimension_dir = 0 
-    output = 20
+    return __data["time"].final_time()
 
-    return output
 
+@component.add(
+    name="INITIAL TIME", units="Month", comp_type="Constant", comp_subtype="Normal"
+)
 def initial_time():
     """
-    
+    The initial time for the simulation.
     """
-    loc_dimension_dir = 0 
-    output = 0
+    return __data["time"].initial_time()
 
-    return output
 
+@component.add(
+    name="SAVEPER",
+    units="Month",
+    limits=(0.0, np.nan),
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"time_step": 1},
+)
 def saveper():
     """
-    
+    The frequency with which output is stored.
     """
-    loc_dimension_dir = 0 
-    output = time_step()
+    return __data["time"].saveper()
 
-    return output
 
+@component.add(
+    name="TIME STEP",
+    units="Month",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def time_step():
     """
-    
+    The time step for the simulation.
     """
-    loc_dimension_dir = 0 
-    output = 1
+    return __data["time"].time_step()
 
-    return output
+
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
+
+
+@component.add(
+    name="Initial Population",
+    subscripts=["Towns"],
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def initial_population():
+    return xr.DataArray(
+        [
+            1.59850e04,
+            2.19240e04,
+            1.03030e04,
+            8.48500e03,
+            2.84380e04,
+            4.94000e02,
+            1.62830e04,
+            3.78190e04,
+            3.32010e04,
+            3.11000e02,
+            4.28440e04,
+            6.08100e03,
+            3.07400e03,
+            1.73700e03,
+            1.65930e04,
+            1.15840e04,
+            4.35930e04,
+            1.61880e04,
+            4.35600e03,
+            7.42700e03,
+            4.51930e04,
+            5.39800e03,
+            1.77900e03,
+            1.33200e04,
+            1.46490e04,
+            1.63320e04,
+            2.47290e04,
+            6.41100e03,
+            2.86600e03,
+            2.12900e03,
+            3.95020e04,
+            4.02430e04,
+            9.02600e03,
+            1.23300e03,
+            4.89700e03,
+            6.17660e05,
+            1.97540e04,
+            4.99600e03,
+            7.96500e03,
+            4.35500e03,
+            3.57440e04,
+            9.82000e03,
+            2.65630e04,
+            3.60900e03,
+            9.38100e04,
+            3.39000e03,
+            5.87320e04,
+            1.90200e03,
+            2.44980e04,
+            1.05162e05,
+            2.15610e04,
+            4.85200e03,
+            1.15090e04,
+            1.26600e03,
+            1.29810e04,
+            6.12500e03,
+            3.38020e04,
+            3.51770e04,
+            3.23500e03,
+            1.33700e03,
+            1.22200e03,
+            5.52980e04,
+            8.66000e02,
+            1.70200e03,
+            1.36060e04,
+            7.54200e03,
+            1.67100e03,
+            1.76680e04,
+            1.89700e03,
+            8.72000e02,
+            6.75600e03,
+            2.64930e04,
+            3.40320e04,
+            2.47290e04,
+            5.12500e03,
+            1.42070e04,
+            7.08600e03,
+            8.47100e03,
+            5.58900e03,
+            2.94570e04,
+            1.13900e04,
+            3.17900e03,
+            1.50590e04,
+            1.37940e04,
+            2.18300e03,
+            1.57200e04,
+            4.95600e03,
+            1.60530e04,
+            2.31120e04,
+            4.06700e03,
+            1.22500e03,
+            1.80000e03,
+            3.50400e03,
+            4.16670e04,
+            1.58730e04,
+            8.88570e04,
+            3.15310e04,
+            4.03180e04,
+            7.52000e02,
+            1.68650e04,
+            6.83180e04,
+            3.16350e04,
+            8.87000e03,
+            2.02280e04,
+            8.18300e03,
+            1.50000e03,
+            2.87890e04,
+            1.05400e03,
+            7.50000e01,
+            1.77650e04,
+            6.24000e03,
+            1.56600e03,
+            7.10400e03,
+            1.74560e04,
+            1.06460e04,
+            6.45900e03,
+            5.25000e03,
+            7.51800e03,
+            7.76400e03,
+            5.13900e03,
+            7.17000e02,
+            1.38790e04,
+            1.02090e04,
+            2.99000e03,
+            6.52000e03,
+            1.22430e04,
+            3.27900e03,
+            6.08790e04,
+            3.37000e02,
+            7.06000e02,
+            2.21570e04,
+            2.03200e03,
+            1.07910e04,
+            1.73460e04,
+            2.48100e03,
+            1.35470e04,
+            3.98800e04,
+            5.91100e03,
+            1.49250e04,
+            4.38200e03,
+            1.90630e04,
+            1.02930e04,
+            2.18000e03,
+            1.31750e04,
+            1.26290e04,
+            1.06020e04,
+            8.05500e03,
+            3.09100e03,
+            7.63770e04,
+            5.94300e03,
+            1.09700e04,
+            5.02500e03,
+            4.07590e04,
+            1.85100e03,
+            3.13940e04,
+            7.11000e02,
+            6.36200e03,
+            8.92400e03,
+            1.57840e04,
+            1.06519e05,
+            2.11030e04,
+            1.00860e04,
+            9.03290e04,
+            1.15960e04,
+            5.94500e04,
+            5.13600e03,
+            2.31840e04,
+            1.98080e04,
+            4.90700e03,
+            3.84990e04,
+            2.51320e04,
+            1.40060e04,
+            6.04500e03,
+            1.01060e04,
+            1.20240e04,
+            5.61730e04,
+            1.27520e04,
+            2.69830e04,
+            5.83900e03,
+            6.33800e03,
+            4.72550e04,
+            2.31160e04,
+            5.21000e02,
+            8.98700e03,
+            2.79990e04,
+            1.32610e04,
+            7.89100e03,
+            3.19000e03,
+            2.70030e04,
+            1.21000e02,
+            8.56000e03,
+            8.43700e03,
+            9.61000e02,
+            8.38000e02,
+            1.67000e02,
+            3.41000e03,
+            1.01720e04,
+            3.30060e04,
+            2.88860e04,
+            2.28000e02,
+            9.50720e04,
+            9.99000e02,
+            1.50900e03,
+            9.90000e02,
+            6.66600e03,
+            1.74160e04,
+            8.51460e04,
+            1.12270e04,
+            1.37080e04,
+            2.83520e04,
+            2.87120e04,
+            4.68000e03,
+            1.48920e04,
+            2.85490e04,
+            1.41550e04,
+            1.57070e04,
+            3.03200e03,
+            1.90310e04,
+            1.05060e04,
+            2.86020e04,
+            4.52700e03,
+            1.90200e03,
+            7.83900e03,
+            5.89000e03,
+            1.61200e03,
+            1.37090e04,
+            1.21400e04,
+            4.80600e03,
+            5.12510e04,
+            1.32100e03,
+            1.78370e04,
+            1.14970e04,
+            8.47000e02,
+            1.23400e03,
+            1.68200e03,
+            4.47370e04,
+            6.48000e02,
+            8.26400e03,
+            5.64680e04,
+            2.82000e03,
+            3.41300e03,
+            2.94200e03,
+            9.22710e04,
+            3.21120e04,
+            1.33830e04,
+            2.47470e04,
+            1.16080e04,
+            5.17550e04,
+            1.47500e03,
+            5.23200e03,
+            1.74890e04,
+            6.95200e03,
+            3.93000e02,
+            5.85600e03,
+            1.25800e03,
+            1.77500e03,
+            7.97300e03,
+            4.13400e04,
+            8.28300e03,
+            9.15000e02,
+            2.06750e04,
+            2.66280e04,
+            6.92000e02,
+            1.81330e04,
+            1.37220e04,
+            1.76120e04,
+            3.25700e03,
+            1.89300e03,
+            4.11900e03,
+            7.21100e03,
+            3.56080e04,
+            1.77100e03,
+            1.81650e04,
+            7.57540e04,
+            1.75140e04,
+            5.79200e03,
+            9.76700e03,
+            1.67190e04,
+            9.50200e03,
+            1.16880e04,
+            1.53060e05,
+            7.80800e03,
+            1.94700e03,
+            2.14370e04,
+            2.69620e04,
+            6.59000e03,
+            9.26800e03,
+            1.76590e04,
+            3.68400e03,
+            8.96300e03,
+            1.37870e04,
+            1.58650e04,
+            5.58740e04,
+            8.01300e03,
+            2.89610e04,
+            3.94900e03,
+            4.85000e02,
+            6.08500e03,
+            8.92600e03,
+            2.00300e03,
+            1.12920e04,
+            3.27000e02,
+            7.54200e03,
+            1.34570e04,
+            2.49320e04,
+            1.83800e03,
+            2.40700e04,
+            6.06320e04,
+            9.87200e03,
+            2.18220e04,
+            5.13500e03,
+            7.80000e02,
+            5.38000e02,
+            3.19150e04,
+            1.29940e04,
+            1.67670e04,
+            2.79820e04,
+            2.75000e03,
+            8.48000e02,
+            4.87500e03,
+            7.66900e03,
+            6.91600e03,
+            3.70100e03,
+            4.23500e03,
+            2.83910e04,
+            1.30600e03,
+            2.74000e03,
+            1.82720e04,
+            4.10940e04,
+            2.19510e04,
+            1.60700e03,
+            7.27700e03,
+            1.12610e04,
+            1.55320e04,
+            1.46180e04,
+            5.37430e04,
+            1.49600e03,
+            1.44890e04,
+            1.42190e04,
+            2.48200e03,
+            7.75400e03,
+            2.23250e04,
+            1.03000e04,
+            2.13740e04,
+            8.99000e02,
+            1.74970e04,
+            3.81200e04,
+            1.81045e05,
+            1.15600e03,
+            1.09550e04,
+            2.37930e04,
+        ],
+        {"Towns": _subscript_dict["Towns"]},
+        ["Towns"],
+    )
+
+
+@component.add(
+    name="Deaths",
+    subscripts=["Towns"],
+    comp_type="Stateful",
+    comp_subtype="Delay",
+    depends_on={"_delayn_deaths": 1},
+    other_deps={
+        "_delayn_deaths": {
+            "initial": {"population": 1, "lifespan": 2},
+            "step": {"births": 1, "lifespan": 1},
+        }
+    },
+)
+def deaths():
+    return _delayn_deaths()
+
+
+_delayn_deaths = DelayN(
+    lambda: births(),
+    lambda: xr.DataArray(lifespan(), {"Towns": _subscript_dict["Towns"]}, ["Towns"]),
+    lambda: population() / lifespan(),
+    lambda: 8,
+    time_step,
+    "_delayn_deaths",
+)
+
+
+@component.add(
+    name="Population",
+    subscripts=["Towns"],
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_population": 1},
+    other_deps={
+        "_integ_population": {
+            "initial": {"initial_population": 1},
+            "step": {"births": 1, "deaths": 1},
+        }
+    },
+)
+def population():
+    return _integ_population()
+
+
+_integ_population = Integ(
+    lambda: births() - deaths(), lambda: initial_population(), "_integ_population"
+)
+
+
+@component.add(
+    name="Birthrate", subscripts=["Towns"], comp_type="Constant", comp_subtype="Normal"
+)
+def birthrate():
+    return xr.DataArray(0.1, {"Towns": _subscript_dict["Towns"]}, ["Towns"])
+
+
+@component.add(
+    name="Births",
+    subscripts=["Towns"],
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"birthrate": 1, "population": 1},
+)
+def births():
+    return birthrate() * population()
+
+
+@component.add(name="Lifespan", comp_type="Constant", comp_subtype="Normal")
+def lifespan():
+    return 70

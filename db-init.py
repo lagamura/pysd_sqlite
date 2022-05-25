@@ -1,31 +1,24 @@
 import pysd
 import os
-import os
 from os import path
 import pathlib
 
-import models
+from sqlalchemy.orm import Session,  sessionmaker
+from sqlalchemy import create_engine
 from database import engine
-from sqlalchemy.orm import Session
-from database import SessionLocal
-from fastapi import Depends
+
+import models
 
 
 
-def get_db():
-    db = SessionLocal()
-    try: 
-        yield db
-    finally:
-        db.close()  
+
           
-def database_init(db:Session):
+def database_init(db:sessionmaker):
 
     print("Initializing Database Models Table...")
     
     models_list = os.listdir('models')
     for model_name in models_list:
-        model_name = "Teacup"
         fileDir = f'./models/{model_name}'
 
         if (not path.exists(fileDir)):
@@ -33,22 +26,38 @@ def database_init(db:Session):
 
         fileExt = r'*.py'
         model_path = list(pathlib.Path(fileDir).glob(fileExt))        
-        print(model_path)
+        print(f'Model path is {model_path}')
         if (model_path):
             model = pysd.load(model_path[0])
         else:
             fileExt = r'*.mdl'
             model_path = list(pathlib.Path(fileDir).glob(fileExt))
-            model = pysd.read_vensim(model_path)
+            print(f'Model path is {model_path}')
+            model = pysd.read_vensim(model_path[0])
+       
         model_res = models.ModelsNamespace(id_name = model_name, namespace = model.namespace)
-        db.add(model_res) 
 
-        db.commit()
-        
+        try:
+            instance = db.query(models.ModelsNamespace).filter_by(id_name=model_name).first()
+            if instance:
+                print(f"This Model already exists in db")
+                continue
+            db.add(model_res)
+            #db.commit()
+            print("added into db successfully")
+        except:
+            # https://stackoverflow.com/questions/63556777/sqlalchemy-add-all-ignore-duplicate-key-integrityerror
+            #db.rollback()
+            raise Exception("Problem with adding in models table in database")
+ 
     return("Successfull Initialization")
 
 def main():
-    database_init(Depends(get_db))
+    
+    SessionLocal = sessionmaker(engine)
+    with SessionLocal() as session:
+        database_init(session)
+        #session.commit()
 
 
     

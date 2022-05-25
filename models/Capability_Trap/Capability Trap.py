@@ -1,473 +1,486 @@
+"""
+Python model 'Capability Trap.py'
+Translated using PySD
+"""
 
-"""
-Python model ../../models/Capability_Trap/Capability Trap.py
-Translated using PySD version 0.6.1
-"""
-from __future__ import division
+from pathlib import Path
 import numpy as np
-from pysd import utils
 import xarray as xr
 
-from pysd.functions import cache
-from pysd import functions
+from pysd.py_backend.functions import step
+from pysd.py_backend.statefuls import Integ
+from pysd.py_backend.lookups import HardcodedLookups
+from pysd import Component
 
-_subscript_dict = {}
+__pysd_version__ = "3.0.0"
 
-_namespace = {
-    'Investment in Capability': 'investment_in_capability',
-    'Stretch': 'stretch',
-    'Pressure to Improve Capability': 'pressure_to_improve_capability',
-    'TIME STEP': 'time_step',
-    'Normal Time Spent Working': 'normal_time_spent_working',
-    'SAVEPER': 'saveper',
-    'Improve Capability Adjustment Time': 'improve_capability_adjustment_time',
-    'Influence of Capability Pressure on Improvement Time': 'influence_of_capability_pressure_on_improvement_time',
-    'Actual Performance': 'actual_performance',
-    'Erosion Timescale': 'erosion_timescale',
-    'Change in Pressure to Do Work': 'change_in_pressure_to_do_work',
-    'INITIAL TIME': 'initial_time',
-    'FINAL TIME': 'final_time',
-    'Capability improvement per investment': 'capability_improvement_per_investment',
-    'Time Spent Working': 'time_spent_working',
-    'Pressure Step': 'pressure_step',
-    'Time Spend on Improvement': 'time_spend_on_improvement',
-    'Work Harder Adjustment Time': 'work_harder_adjustment_time',
-    'Capability Erosion': 'capability_erosion',
-    'Influence of Work Pressure on Improvement Time': 'influence_of_work_pressure_on_improvement_time',
-    'Change in Pressure to Improve Capability': 'change_in_pressure_to_improve_capability',
-    'Capability': 'capability',
-    'Pressure to Do Work': 'pressure_to_do_work',
-    'Exogenous Capability Pressure': 'exogenous_capability_pressure',
-    'Desired Performance': 'desired_performance',
-    'Maximum Work Time': 'maximum_work_time',
-    'Influence of Pressure on Work Time': 'influence_of_pressure_on_work_time',
-    'Performance Step': 'performance_step',
-    'Normal Time Spent on Improvement': 'normal_time_spent_on_improvement'}
+__data = {"scope": None, "time": lambda: 0}
+
+_root = Path(__file__).parent
 
 
-def influence_of_work_pressure_on_improvement_time(x):
+component = Component()
+
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
+
+_control_vars = {
+    "initial_time": lambda: 0,
+    "final_time": lambda: 100,
+    "time_step": lambda: 0.0625,
+    "saveper": lambda: time_step(),
+}
+
+
+def _init_outer_references(data):
+    for key in data:
+        __data[key] = data[key]
+
+
+@component.add(name="Time")
+def time():
     """
-    Influence of Work Pressure on Improvement Time
-    ----------------------------------------------
-    (influence_of_work_pressure_on_improvement_time)
-    Dmnl
-
+    Current time of the model.
     """
-    return functions.lookup(x, [0, 1, 1.5, 2, 5], [1, 1, 0.75, 0.25, 0])
+    return __data["time"]()
 
 
-@cache('step')
-def time_spent_working():
-    """
-    Time Spent Working
-    ------------------
-    (time_spent_working)
-    Person Hours/Week
-    This formulation not quite correct, need to de-conflate the pressure to
-                work from the time spent on improvement...
-    """
-    return np.minimum(
-        normal_time_spent_working() *
-        influence_of_pressure_on_work_time(
-            pressure_to_do_work()),
-        maximum_work_time() -
-        time_spend_on_improvement())
-
-
-@cache('step')
-def change_in_pressure_to_do_work():
-    """
-    Change in Pressure to Do Work
-    -----------------------------
-    (change_in_pressure_to_do_work)
-    1/Weeks
-
-    """
-    return (stretch() - pressure_to_do_work()) / work_harder_adjustment_time()
-
-
-@cache('run')
+@component.add(
+    name="FINAL TIME", units="Week", comp_type="Constant", comp_subtype="Normal"
+)
 def final_time():
     """
-    FINAL TIME
-    ----------
-    (final_time)
-    Week
     The final time for the simulation.
     """
-    return 100
+    return __data["time"].final_time()
 
 
-@cache('step')
-def desired_performance():
-    """
-    Desired Performance
-    -------------------
-    (desired_performance)
-    Widgets/Week
-
-    """
-    return 3000 + functions.step(performance_step(), 10)
-
-
-def _init_pressure_to_improve_capability():
-    """
-    Implicit
-    --------
-    (_init_pressure_to_improve_capability)
-    See docs for pressure_to_improve_capability
-    Provides initial conditions for pressure_to_improve_capability function
-    """
-    return 1
-
-
-@cache('step')
-def exogenous_capability_pressure():
-    """
-    Exogenous Capability Pressure
-    -----------------------------
-    (exogenous_capability_pressure)
-
-
-    """
-    return functions.step(pressure_step(), 10)
-
-
-@cache('step')
-def change_in_pressure_to_improve_capability():
-    """
-    Change in Pressure to Improve Capability
-    ----------------------------------------
-    (change_in_pressure_to_improve_capability)
-    1/Weeks
-
-    """
-    return (stretch() - pressure_to_improve_capability()
-            ) / improve_capability_adjustment_time() + exogenous_capability_pressure()
-
-
-@cache('run')
+@component.add(
+    name="INITIAL TIME", units="Week", comp_type="Constant", comp_subtype="Normal"
+)
 def initial_time():
     """
-    INITIAL TIME
-    ------------
-    (initial_time)
-    Week
     The initial time for the simulation.
     """
-    return 0
+    return __data["time"].initial_time()
 
 
-@cache('run')
-def capability_improvement_per_investment():
+@component.add(
+    name="SAVEPER",
+    units="Week",
+    limits=(0.0, np.nan),
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"time_step": 1},
+)
+def saveper():
     """
-    Capability improvement per investment
-    -------------------------------------
-    (capability_improvement_per_investment)
-    Widgets/Person Hour/Person Hour [0,5,0.25]
-
+    The frequency with which output is stored.
     """
-    return 0.5
+    return __data["time"].saveper()
 
 
-@cache('run')
+@component.add(
+    name="TIME STEP",
+    units="Week",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def time_step():
     """
-    TIME STEP
-    ---------
-    (time_step)
-    Week [0,?]
     The time step for the simulation.
     """
-    return 0.0625
+    return __data["time"].time_step()
 
 
-@cache('run')
-def maximum_work_time():
-    """
-    Maximum Work Time
-    -----------------
-    (maximum_work_time)
-    Person Hours/Week [0,100,5]
-
-    """
-    return 40
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
 
 
-@cache('step')
-def stretch():
-    """
-    Stretch
-    -------
-    (stretch)
-    Dmnl
-
-    """
-    return desired_performance() / actual_performance()
-
-
-@cache('step')
-def capability():
-    """
-    Capability
-    ----------
-    (capability)
-    Widgets/Person Hour
-
-    """
-    return _state['capability']
+@component.add(
+    name="Influence of Work Pressure on Improvement Time",
+    units="Dmnl",
+    comp_type="Lookup",
+    comp_subtype="Normal",
+    depends_on={
+        "__lookup__": "_hardcodedlookup_influence_of_work_pressure_on_improvement_time"
+    },
+)
+def influence_of_work_pressure_on_improvement_time(x, final_subs=None):
+    return _hardcodedlookup_influence_of_work_pressure_on_improvement_time(
+        x, final_subs
+    )
 
 
-@cache('run')
-def performance_step():
-    """
-    Performance Step
-    ----------------
-    (performance_step)
-    Widgets/Week [0,1000,50]
-
-    """
-    return 0
+_hardcodedlookup_influence_of_work_pressure_on_improvement_time = HardcodedLookups(
+    [0.0, 1.0, 1.5, 2.0, 5.0],
+    [1.0, 1.0, 0.75, 0.25, 0.0],
+    {},
+    "interpolate",
+    {},
+    "_hardcodedlookup_influence_of_work_pressure_on_improvement_time",
+)
 
 
-@cache('step')
-def pressure_to_improve_capability():
-    """
-    Pressure to Improve Capability
-    ------------------------------
-    (pressure_to_improve_capability)
-    Dmnl
-
-    """
-    return _state['pressure_to_improve_capability']
-
-
-@cache('step')
-def pressure_to_do_work():
-    """
-    Pressure to Do Work
-    -------------------
-    (pressure_to_do_work)
-    Dmnl
-
-    """
-    return _state['pressure_to_do_work']
-
-
-@cache('step')
-def capability_erosion():
-    """
-    Capability Erosion
-    ------------------
-    (capability_erosion)
-    Widgets/Person Hour/Week
-
-    """
-    return capability() / erosion_timescale()
-
-
-def influence_of_pressure_on_work_time(x):
-    """
-    Influence of Pressure on Work Time
-    ----------------------------------
-    (influence_of_pressure_on_work_time)
-    Dmnl
-
-    """
-    return functions.lookup(x, [0, 0.75, 1, 1.25, 2, 10], [0.75, 0.75, 1, 1.25, 1.5, 1.5])
-
-
-def influence_of_capability_pressure_on_improvement_time(x):
-    """
-    Influence of Capability Pressure on Improvement Time
-    ----------------------------------------------------
-    (influence_of_capability_pressure_on_improvement_time)
-    Dmnl
-
-    """
-    return functions.lookup(x, [0, 0.5, 0.75, 1, 2, 5], [0, 0, 0.5, 1, 1.5, 1.5])
-
-
-@cache('run')
-def normal_time_spent_working():
-    """
-    Normal Time Spent Working
-    -------------------------
-    (normal_time_spent_working)
-    Person Hours/Week
-
-    """
-    return 30
-
-
-def _init_capability():
-    """
-    Implicit
-    --------
-    (_init_capability)
-    See docs for capability
-    Provides initial conditions for capability function
-    """
-    return 100
-
-
-@cache('run')
-def work_harder_adjustment_time():
-    """
-    Work Harder Adjustment Time
-    ---------------------------
-    (work_harder_adjustment_time)
-    Weeks
-
-    """
-    return 3
-
-
-@cache('run')
-def improve_capability_adjustment_time():
-    """
-    Improve Capability Adjustment Time
-    ----------------------------------
-    (improve_capability_adjustment_time)
-    Weeks [0,50,1]
-
-    """
-    return 9
-
-
-def _init_pressure_to_do_work():
-    """
-    Implicit
-    --------
-    (_init_pressure_to_do_work)
-    See docs for pressure_to_do_work
-    Provides initial conditions for pressure_to_do_work function
-    """
-    return 1
-
-
-@cache('step')
-def actual_performance():
-    """
-    Actual Performance
-    ------------------
-    (actual_performance)
-    Widgets/Week
-
-    """
-    return capability() * time_spent_working()
-
-
-@cache('step')
-def _dcapability_dt():
-    """
-    Implicit
-    --------
-    (_dcapability_dt)
-    See docs for capability
-    Provides derivative for capability function
-    """
-    return investment_in_capability() - capability_erosion()
-
-
-@cache('step')
-def _dpressure_to_do_work_dt():
-    """
-    Implicit
-    --------
-    (_dpressure_to_do_work_dt)
-    See docs for pressure_to_do_work
-    Provides derivative for pressure_to_do_work function
-    """
-    return change_in_pressure_to_do_work()
-
-
-@cache('step')
-def _dpressure_to_improve_capability_dt():
-    """
-    Implicit
-    --------
-    (_dpressure_to_improve_capability_dt)
-    See docs for pressure_to_improve_capability
-    Provides derivative for pressure_to_improve_capability function
-    """
-    return change_in_pressure_to_improve_capability()
-
-
-@cache('run')
-def normal_time_spent_on_improvement():
-    """
-    Normal Time Spent on Improvement
-    --------------------------------
-    (normal_time_spent_on_improvement)
-    Person Hours/Week
-
-    """
-    return 10
-
-
-@cache('run')
-def erosion_timescale():
-    """
-    Erosion Timescale
-    -----------------
-    (erosion_timescale)
-    Weeks [0,50,1]
-
-    """
-    return 20
-
-
-@cache('step')
+@component.add(
+    name="Investment in Capability",
+    units="Widgets/Person Hour/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "time_spend_on_improvement": 1,
+        "capability_improvement_per_investment": 1,
+    },
+)
 def investment_in_capability():
-    """
-    Investment in Capability
-    ------------------------
-    (investment_in_capability)
-    Widgets/Person Hour/Week
-
-    """
     return time_spend_on_improvement() * capability_improvement_per_investment()
 
 
-@cache('step')
-def saveper():
-    """
-    SAVEPER
-    -------
-    (saveper)
-    Week [0,?]
-    The frequency with which output is stored.
-    """
-    return time_step()
+@component.add(
+    name="Capability Erosion",
+    units="Widgets/Person Hour/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"capability": 1, "erosion_timescale": 1},
+)
+def capability_erosion():
+    return capability() / erosion_timescale()
 
 
-@cache('run')
-def pressure_step():
-    """
-    Pressure Step
-    -------------
-    (pressure_step)
-    [-0.05,0.1,0.01]
+@component.add(
+    name="Capability improvement per investment",
+    units="Widgets/Person Hour/Person Hour",
+    limits=(0.0, 5.0, 0.25),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def capability_improvement_per_investment():
+    return 0.5
 
-    """
+
+@component.add(
+    name="Change in Pressure to Do Work",
+    units="1/Weeks",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "stretch": 1,
+        "pressure_to_do_work": 1,
+        "work_harder_adjustment_time": 1,
+    },
+)
+def change_in_pressure_to_do_work():
+    return (stretch() - pressure_to_do_work()) / work_harder_adjustment_time()
+
+
+@component.add(
+    name="Change in Pressure to Improve Capability",
+    units="1/Weeks",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "stretch": 1,
+        "pressure_to_improve_capability": 1,
+        "improve_capability_adjustment_time": 1,
+        "exogenous_capability_pressure": 1,
+    },
+)
+def change_in_pressure_to_improve_capability():
+    return (
+        stretch() - pressure_to_improve_capability()
+    ) / improve_capability_adjustment_time() + exogenous_capability_pressure()
+
+
+@component.add(
+    name="Desired Performance",
+    units="Widgets/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"performance_step": 1, "time": 1},
+)
+def desired_performance():
+    return 3000 + step(__data["time"], performance_step(), 10)
+
+
+@component.add(
+    name="Erosion Timescale",
+    units="Weeks",
+    limits=(0.0, 50.0, 1.0),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def erosion_timescale():
+    return 20
+
+
+@component.add(
+    name="Exogenous Capability Pressure",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"pressure_step": 1, "time": 1},
+)
+def exogenous_capability_pressure():
+    return step(__data["time"], pressure_step(), 10)
+
+
+@component.add(
+    name="Improve Capability Adjustment Time",
+    units="Weeks",
+    limits=(0.0, 50.0, 1.0),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def improve_capability_adjustment_time():
+    return 9
+
+
+@component.add(
+    name="Influence of Capability Pressure on Improvement Time",
+    units="Dmnl",
+    comp_type="Lookup",
+    comp_subtype="Normal",
+    depends_on={
+        "__lookup__": "_hardcodedlookup_influence_of_capability_pressure_on_improvement_time"
+    },
+)
+def influence_of_capability_pressure_on_improvement_time(x, final_subs=None):
+    return _hardcodedlookup_influence_of_capability_pressure_on_improvement_time(
+        x, final_subs
+    )
+
+
+_hardcodedlookup_influence_of_capability_pressure_on_improvement_time = (
+    HardcodedLookups(
+        [0.0, 0.5, 0.75, 1.0, 2.0, 5.0],
+        [0.0, 0.0, 0.5, 1.0, 1.5, 1.5],
+        {},
+        "interpolate",
+        {},
+        "_hardcodedlookup_influence_of_capability_pressure_on_improvement_time",
+    )
+)
+
+
+@component.add(
+    name="Influence of Pressure on Work Time",
+    units="Dmnl",
+    comp_type="Lookup",
+    comp_subtype="Normal",
+    depends_on={"__lookup__": "_hardcodedlookup_influence_of_pressure_on_work_time"},
+)
+def influence_of_pressure_on_work_time(x, final_subs=None):
+    return _hardcodedlookup_influence_of_pressure_on_work_time(x, final_subs)
+
+
+_hardcodedlookup_influence_of_pressure_on_work_time = HardcodedLookups(
+    [0.0, 0.75, 1.0, 1.25, 2.0, 10.0],
+    [0.75, 0.75, 1.0, 1.25, 1.5, 1.5],
+    {},
+    "interpolate",
+    {},
+    "_hardcodedlookup_influence_of_pressure_on_work_time",
+)
+
+
+@component.add(
+    name="Work Harder Adjustment Time",
+    units="Weeks",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def work_harder_adjustment_time():
+    return 3
+
+
+@component.add(
+    name="Pressure to Do Work",
+    units="Dmnl",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_pressure_to_do_work": 1},
+    other_deps={
+        "_integ_pressure_to_do_work": {
+            "initial": {},
+            "step": {"change_in_pressure_to_do_work": 1},
+        }
+    },
+)
+def pressure_to_do_work():
+    return _integ_pressure_to_do_work()
+
+
+_integ_pressure_to_do_work = Integ(
+    lambda: change_in_pressure_to_do_work(), lambda: 1, "_integ_pressure_to_do_work"
+)
+
+
+@component.add(
+    name="Maximum Work Time",
+    units="Person Hours/Week",
+    limits=(0.0, 100.0, 5.0),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def maximum_work_time():
+    return 40
+
+
+@component.add(
+    name="Normal Time Spent on Improvement",
+    units="Person Hours/Week",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def normal_time_spent_on_improvement():
+    return 10
+
+
+@component.add(
+    name="Normal Time Spent Working",
+    units="Person Hours/Week",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def normal_time_spent_working():
+    return 30
+
+
+@component.add(
+    name="Performance Step",
+    units="Widgets/Week",
+    limits=(0.0, 1000.0, 50.0),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def performance_step():
     return 0
 
 
-@cache('step')
+@component.add(
+    name="Pressure Step",
+    limits=(-0.05, 0.1, 0.01),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def pressure_step():
+    return 0
+
+
+@component.add(
+    name="Time Spend on Improvement",
+    units="Person Hours/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "normal_time_spent_on_improvement": 1,
+        "influence_of_capability_pressure_on_improvement_time": 1,
+        "pressure_to_improve_capability": 1,
+        "pressure_to_do_work": 1,
+        "influence_of_work_pressure_on_improvement_time": 1,
+    },
+)
 def time_spend_on_improvement():
+    return (
+        normal_time_spent_on_improvement()
+        * influence_of_capability_pressure_on_improvement_time(
+            pressure_to_improve_capability()
+        )
+        * influence_of_work_pressure_on_improvement_time(pressure_to_do_work())
+    )
+
+
+@component.add(
+    name="Pressure to Improve Capability",
+    units="Dmnl",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_pressure_to_improve_capability": 1},
+    other_deps={
+        "_integ_pressure_to_improve_capability": {
+            "initial": {},
+            "step": {"change_in_pressure_to_improve_capability": 1},
+        }
+    },
+)
+def pressure_to_improve_capability():
+    return _integ_pressure_to_improve_capability()
+
+
+_integ_pressure_to_improve_capability = Integ(
+    lambda: change_in_pressure_to_improve_capability(),
+    lambda: 1,
+    "_integ_pressure_to_improve_capability",
+)
+
+
+@component.add(
+    name="Stretch",
+    units="Dmnl",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"desired_performance": 1, "actual_performance": 1},
+)
+def stretch():
+    return desired_performance() / actual_performance()
+
+
+@component.add(
+    name="Time Spent Working",
+    units="Person Hours/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "normal_time_spent_working": 1,
+        "influence_of_pressure_on_work_time": 1,
+        "pressure_to_do_work": 1,
+        "maximum_work_time": 1,
+        "time_spend_on_improvement": 1,
+    },
+)
+def time_spent_working():
     """
-    Time Spend on Improvement
-    -------------------------
-    (time_spend_on_improvement)
-    Person Hours/Week
-
+    This formulation not quite correct, need to de-conflate the pressure to work from the time spent on improvement...
     """
-    return normal_time_spent_on_improvement() * influence_of_capability_pressure_on_improvement_time(
-        pressure_to_improve_capability()) * influence_of_work_pressure_on_improvement_time(pressure_to_do_work())
+    return np.minimum(
+        normal_time_spent_working()
+        * influence_of_pressure_on_work_time(pressure_to_do_work()),
+        maximum_work_time() - time_spend_on_improvement(),
+    )
 
 
-def time():
-    return _t
-functions.time = time
-functions.initial_time = initial_time
+@component.add(
+    name="Actual Performance",
+    units="Widgets/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"capability": 1, "time_spent_working": 1},
+)
+def actual_performance():
+    return capability() * time_spent_working()
+
+
+@component.add(
+    name="Capability",
+    units="Widgets/Person Hour",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_capability": 1},
+    other_deps={
+        "_integ_capability": {
+            "initial": {},
+            "step": {"investment_in_capability": 1, "capability_erosion": 1},
+        }
+    },
+)
+def capability():
+    return _integ_capability()
+
+
+_integ_capability = Integ(
+    lambda: investment_in_capability() - capability_erosion(),
+    lambda: 100,
+    "_integ_capability",
+)

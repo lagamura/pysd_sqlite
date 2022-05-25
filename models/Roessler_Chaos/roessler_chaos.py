@@ -1,260 +1,185 @@
+"""
+Python model 'roessler_chaos.py'
+Translated using PySD
+"""
 
-"""
-Python model ../../models/Roessler_Chaos/roessler_chaos.py
-Translated using PySD version 0.6.1
-"""
-from __future__ import division
+from pathlib import Path
 import numpy as np
-from pysd import utils
 import xarray as xr
 
-from pysd.functions import cache
-from pysd import functions
+from pysd.py_backend.statefuls import Integ
+from pysd import Component
 
-_subscript_dict = {}
+__pysd_version__ = "3.0.0"
 
-_namespace = {
-    'a': 'a',
-    'dydt': 'dydt',
-    'c': 'c',
-    'b': 'b',
-    'FINAL TIME': 'final_time',
-    'TIME STEP': 'time_step',
-    'SAVEPER': 'saveper',
-    'dzdt': 'dzdt',
-    'y': 'y',
-    'INITIAL TIME': 'initial_time',
-    'dxdt': 'dxdt',
-    'x': 'x',
-    'z': 'z'}
+__data = {"scope": None, "time": lambda: 0}
+
+_root = Path(__file__).parent
 
 
-@cache('run')
+component = Component()
+
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
+
+_control_vars = {
+    "initial_time": lambda: 0,
+    "final_time": lambda: 100,
+    "time_step": lambda: 0.03125,
+    "saveper": lambda: time_step(),
+}
+
+
+def _init_outer_references(data):
+    for key in data:
+        __data[key] = data[key]
+
+
+@component.add(name="Time")
+def time():
+    """
+    Current time of the model.
+    """
+    return __data["time"]()
+
+
+@component.add(
+    name="FINAL TIME", units="Month", comp_type="Constant", comp_subtype="Normal"
+)
+def final_time():
+    """
+    The final time for the simulation.
+    """
+    return __data["time"].final_time()
+
+
+@component.add(
+    name="INITIAL TIME", units="Month", comp_type="Constant", comp_subtype="Normal"
+)
+def initial_time():
+    """
+    The initial time for the simulation.
+    """
+    return __data["time"].initial_time()
+
+
+@component.add(
+    name="SAVEPER",
+    units="Month",
+    limits=(0.0, np.nan),
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"time_step": 1},
+)
+def saveper():
+    """
+    The frequency with which output is stored.
+    """
+    return __data["time"].saveper()
+
+
+@component.add(
+    name="TIME STEP",
+    units="Month",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def time_step():
+    """
+    The time step for the simulation.
+    """
+    return __data["time"].time_step()
+
+
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
+
+
+@component.add(name="a", comp_type="Constant", comp_subtype="Normal")
 def a():
-    """
-    a
-    -
-    (a)
-
-
-    """
     return 0.2
 
 
-@cache('step')
-def dydt():
-    """
-    dydt
-    ----
-    (dydt)
+@component.add(name="b", comp_type="Constant", comp_subtype="Normal")
+def b():
+    return 0.2
 
 
-    """
-    return x() + a() * y()
-
-
-@cache('run')
+@component.add(name="c", comp_type="Constant", comp_subtype="Normal")
 def c():
-    """
-    c
-    -
-    (c)
-
-
-    """
     return 5.7
 
 
-@cache('run')
-def b():
-    """
-    b
-    -
-    (b)
-
-
-    """
-    return 0.2
-
-
-@cache('step')
-def _dy_dt():
-    """
-    Implicit
-    --------
-    (_dy_dt)
-    See docs for y
-    Provides derivative for y function
-    """
-    return dydt()
-
-
-@cache('run')
-def final_time():
-    """
-    FINAL TIME
-    ----------
-    (final_time)
-    Month
-    The final time for the simulation.
-    """
-    return 100
-
-
-def _init_z():
-    """
-    Implicit
-    --------
-    (_init_z)
-    See docs for z
-    Provides initial conditions for z function
-    """
-    return 0.4
-
-
-@cache('step')
-def _dz_dt():
-    """
-    Implicit
-    --------
-    (_dz_dt)
-    See docs for z
-    Provides derivative for z function
-    """
-    return dzdt()
-
-
-@cache('step')
-def dzdt():
-    """
-    dzdt
-    ----
-    (dzdt)
-
-
-    """
-    return b() + z() * (x() - c())
-
-
-def _init_x():
-    """
-    Implicit
-    --------
-    (_init_x)
-    See docs for x
-    Provides initial conditions for x function
-    """
-    return 0.5
-
-
-@cache('step')
-def _dx_dt():
-    """
-    Implicit
-    --------
-    (_dx_dt)
-    See docs for x
-    Provides derivative for x function
-    """
-    return dxdt()
-
-
-@cache('step')
-def y():
-    """
-    y
-    -
-    (y)
-
-
-    """
-    return _state['y']
-
-
-def _init_y():
-    """
-    Implicit
-    --------
-    (_init_y)
-    See docs for y
-    Provides initial conditions for y function
-    """
-    return 0.5
-
-
-@cache('step')
-def saveper():
-    """
-    SAVEPER
-    -------
-    (saveper)
-    Month [0,?]
-    The frequency with which output is stored.
-    """
-    return time_step()
-
-
-@cache('run')
-def initial_time():
-    """
-    INITIAL TIME
-    ------------
-    (initial_time)
-    Month
-    The initial time for the simulation.
-    """
-    return 0
-
-
-@cache('run')
-def time_step():
-    """
-    TIME STEP
-    ---------
-    (time_step)
-    Month [0,?]
-    The time step for the simulation.
-    """
-    return 0.03125
-
-
-@cache('step')
+@component.add(
+    name="dxdt",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"y": 1, "z": 1},
+)
 def dxdt():
-    """
-    dxdt
-    ----
-    (dxdt)
-
-
-    """
     return -y() - z()
 
 
-@cache('step')
+@component.add(
+    name="dydt",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"x": 1, "a": 1, "y": 1},
+)
+def dydt():
+    return x() + a() * y()
+
+
+@component.add(
+    name="dzdt",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"b": 1, "c": 1, "x": 1, "z": 1},
+)
+def dzdt():
+    return b() + z() * (x() - c())
+
+
+@component.add(
+    name="x",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_x": 1},
+    other_deps={"_integ_x": {"initial": {}, "step": {"dxdt": 1}}},
+)
 def x():
-    """
-    x
-    -
-    (x)
+    return _integ_x()
 
 
-    """
-    return _state['x']
+_integ_x = Integ(lambda: dxdt(), lambda: 0.5, "_integ_x")
 
 
-@cache('step')
+@component.add(
+    name="y",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_y": 1},
+    other_deps={"_integ_y": {"initial": {}, "step": {"dydt": 1}}},
+)
+def y():
+    return _integ_y()
+
+
+_integ_y = Integ(lambda: dydt(), lambda: 0.5, "_integ_y")
+
+
+@component.add(
+    name="z",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_z": 1},
+    other_deps={"_integ_z": {"initial": {}, "step": {"dzdt": 1}}},
+)
 def z():
-    """
-    z
-    -
-    (z)
+    return _integ_z()
 
 
-    """
-    return _state['z']
-
-
-def time():
-    return _t
-functions.time = time
-functions.initial_time = initial_time
+_integ_z = Integ(lambda: dzdt(), lambda: 0.4, "_integ_z")

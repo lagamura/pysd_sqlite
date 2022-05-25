@@ -1,5 +1,5 @@
 """
-Python model 'Atmospheric_Bathtub.py'
+Python model 'bank_balance.py'
 Translated using PySD
 """
 
@@ -45,7 +45,7 @@ def time():
 
 
 @component.add(
-    name="FINAL TIME", units="Month", comp_type="Constant", comp_subtype="Normal"
+    name="FINAL TIME", units="Day", comp_type="Constant", comp_subtype="Normal"
 )
 def final_time():
     """
@@ -55,7 +55,7 @@ def final_time():
 
 
 @component.add(
-    name="INITIAL TIME", units="Month", comp_type="Constant", comp_subtype="Normal"
+    name="INITIAL TIME", units="Day", comp_type="Constant", comp_subtype="Normal"
 )
 def initial_time():
     """
@@ -66,7 +66,7 @@ def initial_time():
 
 @component.add(
     name="SAVEPER",
-    units="Month",
+    units="Day",
     limits=(0.0, np.nan),
     comp_type="Auxiliary",
     comp_subtype="Normal",
@@ -81,7 +81,7 @@ def saveper():
 
 @component.add(
     name="TIME STEP",
-    units="Month",
+    units="Day",
     limits=(0.0, np.nan),
     comp_type="Constant",
     comp_subtype="Normal",
@@ -98,44 +98,55 @@ def time_step():
 #######################################################################
 
 
-@component.add(name="Emissions", comp_type="Constant", comp_subtype="Normal")
-def emissions():
-    return 0
-
-
 @component.add(
-    name="Excess Atmospheric Carbon",
+    name="Balance",
+    units="Dollars",
     comp_type="Stateful",
     comp_subtype="Integ",
-    depends_on={"_integ_excess_atmospheric_carbon": 1},
-    other_deps={
-        "_integ_excess_atmospheric_carbon": {
-            "initial": {},
-            "step": {"emissions": 1, "natural_removal": 1},
-        }
-    },
+    depends_on={"_integ_balance": 1},
+    other_deps={"_integ_balance": {"initial": {}, "step": {"income": 1}}},
 )
-def excess_atmospheric_carbon():
-    return _integ_excess_atmospheric_carbon()
+def balance():
+    return _integ_balance()
 
 
-_integ_excess_atmospheric_carbon = Integ(
-    lambda: emissions() - natural_removal(),
-    lambda: 0,
-    "_integ_excess_atmospheric_carbon",
-)
+_integ_balance = Integ(lambda: income(), lambda: 100, "_integ_balance")
 
 
 @component.add(
-    name="Natural Removal",
+    name="Deposits", units="Dollars/Day", comp_type="Constant", comp_subtype="Normal"
+)
+def deposits():
+    return 5
+
+
+@component.add(
+    name="Income",
+    units="Dollars/Day",
     comp_type="Auxiliary",
     comp_subtype="Normal",
-    depends_on={"excess_atmospheric_carbon": 1, "removal_constant": 1},
+    depends_on={"deposits": 1, "interest": 1},
 )
-def natural_removal():
-    return excess_atmospheric_carbon() * removal_constant()
+def income():
+    return deposits() + interest()
 
 
-@component.add(name="Removal Constant", comp_type="Constant", comp_subtype="Normal")
-def removal_constant():
-    return 0.01
+@component.add(
+    name="Interest",
+    units="Dollars/Day",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"balance": 1, "interest_rate": 1},
+)
+def interest():
+    return balance() * interest_rate()
+
+
+@component.add(
+    name="Interest Rate",
+    units="Dollars/Dollar/Day",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def interest_rate():
+    return 0.001

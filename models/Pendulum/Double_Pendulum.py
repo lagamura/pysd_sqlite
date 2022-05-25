@@ -1,342 +1,349 @@
+"""
+Python model 'Double_Pendulum.py'
+Translated using PySD
+"""
 
-"""
-Python model ../../models/Pendulum/Double_Pendulum.py
-Translated using PySD version 0.6.1
-"""
-from __future__ import division
+from pathlib import Path
 import numpy as np
-from pysd import utils
 import xarray as xr
 
-from pysd.functions import cache
-from pysd import functions
+from pysd.py_backend.statefuls import Integ
+from pysd import Component
 
-_subscript_dict = {}
+__pysd_version__ = "3.0.0"
 
-_namespace = {
-    'Mass of Pendulum2': 'mass_of_pendulum2', 'INITIAL TIME': 'initial_time',
-    'FINAL TIME': 'final_time', 'Angular Position2': 'angular_position2',
-    'Angular Position': 'angular_position', 'TIME STEP': 'time_step',
-    'Angular Velocity': 'angular_velocity',
-    'Change in Angular Position': 'change_in_angular_position',
-    'Change in Angular Velocity': 'change_in_angular_velocity',
-    'Change in Angular Position2': 'change_in_angular_position2',
-    'Angular Velocity2': 'angular_velocity2', 'SAVEPER': 'saveper',
-    'Length of Pendulum2': 'length_of_pendulum2',
-    'Change in Angular Velocity2': 'change_in_angular_velocity2',
-    'Mass of Pendulum': 'mass_of_pendulum',
-    'Acceleration due to Gravity': 'acceleration_due_to_gravity',
-    'Length of Pendulum': 'length_of_pendulum'}
+__data = {"scope": None, "time": lambda: 0}
+
+_root = Path(__file__).parent
 
 
-@cache('run')
+component = Component()
+
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
+
+_control_vars = {
+    "initial_time": lambda: 0,
+    "final_time": lambda: 100,
+    "time_step": lambda: 0.0078125,
+    "saveper": lambda: 0.1,
+}
+
+
+def _init_outer_references(data):
+    for key in data:
+        __data[key] = data[key]
+
+
+@component.add(name="Time")
+def time():
+    """
+    Current time of the model.
+    """
+    return __data["time"]()
+
+
+@component.add(
+    name="FINAL TIME", units="Second", comp_type="Constant", comp_subtype="Normal"
+)
 def final_time():
     """
-    FINAL TIME
-    ----------
-    (final_time)
-    Second
     The final time for the simulation.
     """
-    return 100
+    return __data["time"].final_time()
 
 
-@cache('run')
+@component.add(
+    name="INITIAL TIME", units="Second", comp_type="Constant", comp_subtype="Normal"
+)
 def initial_time():
     """
-    INITIAL TIME
-    ------------
-    (initial_time)
-    Second
     The initial time for the simulation.
     """
-    return 0
+    return __data["time"].initial_time()
 
 
-@cache('run')
+@component.add(
+    name="SAVEPER",
+    units="Second",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def saveper():
+    """
+    The frequency with which output is stored.
+    """
+    return __data["time"].saveper()
+
+
+@component.add(
+    name="TIME STEP",
+    units="Second",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def time_step():
     """
-    TIME STEP
-    ---------
-    (time_step)
-    Second [0,?]
     The time step for the simulation.
     """
-    return 0.0078125
+    return __data["time"].time_step()
 
 
-@cache('step')
-def _dangular_velocity2_dt():
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
+
+
+@component.add(
+    name="Change in Angular Velocity",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "acceleration_due_to_gravity": 2,
+        "mass_of_pendulum": 2,
+        "mass_of_pendulum2": 5,
+        "angular_position": 5,
+        "angular_position2": 4,
+        "angular_velocity": 1,
+        "length_of_pendulum2": 1,
+        "angular_velocity2": 1,
+        "length_of_pendulum": 2,
+    },
+)
+def change_in_angular_velocity():
     """
-    Implicit
-    --------
-    (_dangular_velocity2_dt)
-    See docs for angular_velocity2
-    Provides derivative for angular_velocity2 function
+    If anything is worth doing, it's worth doing well. This is not worth doing well.
     """
-    return change_in_angular_velocity2()
+    return (
+        acceleration_due_to_gravity()
+        * (2 * mass_of_pendulum() + mass_of_pendulum2())
+        * np.sin(angular_position())
+        - mass_of_pendulum2()
+        * acceleration_due_to_gravity()
+        * np.sin(angular_position() - 2 * angular_position2())
+        - 2
+        * np.sin(angular_position() - angular_position2())
+        * mass_of_pendulum2()
+        * (
+            angular_velocity2() ** 2 * length_of_pendulum2()
+            + angular_velocity() ** 2
+            * length_of_pendulum()
+            * np.cos(angular_position() - angular_position2())
+        )
+    ) / (
+        length_of_pendulum()
+        * (
+            2 * mass_of_pendulum()
+            + mass_of_pendulum2()
+            - mass_of_pendulum2()
+            * np.cos(2 * angular_position() - 2 * angular_position2())
+        )
+    )
 
 
-@cache('step')
-def change_in_angular_position():
-    """
-    Change in Angular Position
-    --------------------------
-    (change_in_angular_position)
-
-
-    """
-    return angular_velocity()
-
-
-@cache('step')
-def angular_position():
-    """
-    Angular Position
-    ----------------
-    (angular_position)
-    radians
-    Angle between the pendulum and vertical
-    """
-    return _state['angular_position']
-
-
-@cache('run')
-def length_of_pendulum():
-    """
-    Length of Pendulum
-    ------------------
-    (length_of_pendulum)
-    Meter
-
-    """
-    return 10
-
-
-def _init_angular_velocity():
-    """
-    Implicit
-    --------
-    (_init_angular_velocity)
-    See docs for angular_velocity
-    Provides initial conditions for angular_velocity function
-    """
-    return 0
-
-
-@cache('step')
-def angular_velocity2():
-    """
-    Angular Velocity2
-    -----------------
-    (angular_velocity2)
-
-
-    """
-    return _state['angular_velocity2']
-
-
-@cache('step')
+@component.add(
+    name="Change in Angular Velocity2",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "angular_position": 4,
+        "angular_position2": 3,
+        "angular_velocity": 1,
+        "mass_of_pendulum2": 5,
+        "mass_of_pendulum": 3,
+        "length_of_pendulum": 1,
+        "angular_velocity2": 1,
+        "length_of_pendulum2": 2,
+        "acceleration_due_to_gravity": 1,
+    },
+)
 def change_in_angular_velocity2():
-    """
-    Change in Angular Velocity2
-    ---------------------------
-    (change_in_angular_velocity2)
+    return (
+        2
+        * np.sin(angular_position() - angular_position2())
+        * (
+            angular_velocity() ** 2
+            * length_of_pendulum()
+            * (mass_of_pendulum() + mass_of_pendulum2())
+            + acceleration_due_to_gravity()
+            * (mass_of_pendulum() + mass_of_pendulum2())
+            * np.cos(angular_position())
+            + angular_velocity2() ** 2
+            * length_of_pendulum2()
+            * mass_of_pendulum2()
+            * np.cos(angular_position() - angular_position2())
+        )
+    ) / (
+        length_of_pendulum2()
+        * (
+            2 * mass_of_pendulum()
+            + mass_of_pendulum2()
+            - mass_of_pendulum2()
+            * np.cos(2 * angular_position() - 2 * angular_position2())
+        )
+    )
 
 
-    """
-    return (2 * np.sin(angular_position() - angular_position2()) * (angular_velocity()**2 * length_of_pendulum() * (mass_of_pendulum() + mass_of_pendulum2()) + acceleration_due_to_gravity() * (mass_of_pendulum() + mass_of_pendulum2()) * np.cos(angular_position()) + angular_velocity2()
-                                                                    ** 2 * length_of_pendulum2() * mass_of_pendulum2() * np.cos(angular_position() - angular_position2()))) / (length_of_pendulum2() * (2 * mass_of_pendulum() + mass_of_pendulum2() - mass_of_pendulum2() * np.cos(2 * angular_position() - 2 * angular_position2())))
-
-
-@cache('run')
+@component.add(
+    name="Acceleration due to Gravity",
+    units="Meters/Second/Second",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def acceleration_due_to_gravity():
-    """
-    Acceleration due to Gravity
-    ---------------------------
-    (acceleration_due_to_gravity)
-    Meters/Second/Second
-
-    """
     return -9.8
 
 
-@cache('step')
+@component.add(
+    name="Angular Position",
+    units="radians",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_angular_position": 1},
+    other_deps={
+        "_integ_angular_position": {
+            "initial": {},
+            "step": {"change_in_angular_position": 1},
+        }
+    },
+)
+def angular_position():
+    """
+    Angle between the pendulum and vertical
+    """
+    return _integ_angular_position()
+
+
+_integ_angular_position = Integ(
+    lambda: change_in_angular_position(), lambda: 1, "_integ_angular_position"
+)
+
+
+@component.add(
+    name="Angular Position2",
+    units="radians",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_angular_position2": 1},
+    other_deps={
+        "_integ_angular_position2": {
+            "initial": {},
+            "step": {"change_in_angular_position2": 1},
+        }
+    },
+)
 def angular_position2():
     """
-    Angular Position2
-    -----------------
-    (angular_position2)
-    radians
     http://www.myphysicslab.com/dbl_pendulum.html
     """
-    return _state['angular_position2']
+    return _integ_angular_position2()
 
 
-def _init_angular_velocity2():
-    """
-    Implicit
-    --------
-    (_init_angular_velocity2)
-    See docs for angular_velocity2
-    Provides initial conditions for angular_velocity2 function
-    """
-    return 0
+_integ_angular_position2 = Integ(
+    lambda: change_in_angular_position2(), lambda: 1, "_integ_angular_position2"
+)
 
 
-@cache('step')
+@component.add(
+    name="Angular Velocity",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_angular_velocity": 1},
+    other_deps={
+        "_integ_angular_velocity": {
+            "initial": {},
+            "step": {"change_in_angular_velocity": 1},
+        }
+    },
+)
 def angular_velocity():
-    """
-    Angular Velocity
-    ----------------
-    (angular_velocity)
+    return _integ_angular_velocity()
 
 
-    """
-    return _state['angular_velocity']
+_integ_angular_velocity = Integ(
+    lambda: change_in_angular_velocity(), lambda: 0, "_integ_angular_velocity"
+)
 
 
-@cache('step')
-def _dangular_position2_dt():
-    """
-    Implicit
-    --------
-    (_dangular_position2_dt)
-    See docs for angular_position2
-    Provides derivative for angular_position2 function
-    """
-    return change_in_angular_position2()
+@component.add(
+    name="Angular Velocity2",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_angular_velocity2": 1},
+    other_deps={
+        "_integ_angular_velocity2": {
+            "initial": {},
+            "step": {"change_in_angular_velocity2": 1},
+        }
+    },
+)
+def angular_velocity2():
+    return _integ_angular_velocity2()
 
 
-@cache('run')
-def mass_of_pendulum2():
-    """
-    Mass of Pendulum2
-    -----------------
-    (mass_of_pendulum2)
-    Kilogram
-
-    """
-    return 10
+_integ_angular_velocity2 = Integ(
+    lambda: change_in_angular_velocity2(), lambda: 0, "_integ_angular_velocity2"
+)
 
 
-def _init_angular_position2():
-    """
-    Implicit
-    --------
-    (_init_angular_position2)
-    See docs for angular_position2
-    Provides initial conditions for angular_position2 function
-    """
-    return 1
+@component.add(
+    name="Change in Angular Position",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"angular_velocity": 1},
+)
+def change_in_angular_position():
+    return angular_velocity()
 
 
-@cache('step')
-def change_in_angular_velocity():
-    """
-    Change in Angular Velocity
-    --------------------------
-    (change_in_angular_velocity)
-
-    If anything is worth doing, it's worth doing well.		This is not worth doing well.
-    """
-    return (
-        acceleration_due_to_gravity() * (
-            2 * mass_of_pendulum() + mass_of_pendulum2()) * np.sin(
-            angular_position()) - mass_of_pendulum2() * acceleration_due_to_gravity() * np.sin(
-                angular_position() - 2 * angular_position2()) - 2 * np.sin(
-                    angular_position() - angular_position2()) * mass_of_pendulum2() * (
-                        angular_velocity2()**2 * length_of_pendulum2() + angular_velocity()**2 * length_of_pendulum() * np.cos(
-                            angular_position() - angular_position2()))) / (
-                                length_of_pendulum() * (
-                                    2 * mass_of_pendulum() + mass_of_pendulum2() - mass_of_pendulum2() * np.cos(
-                                        2 * angular_position() - 2 * angular_position2())))
-
-
-@cache('step')
-def _dangular_position_dt():
-    """
-    Implicit
-    --------
-    (_dangular_position_dt)
-    See docs for angular_position
-    Provides derivative for angular_position function
-    """
-    return change_in_angular_position()
-
-
-def _init_angular_position():
-    """
-    Implicit
-    --------
-    (_init_angular_position)
-    See docs for angular_position
-    Provides initial conditions for angular_position function
-    """
-    return 1
-
-
-@cache('run')
-def length_of_pendulum2():
-    """
-    Length of Pendulum2
-    -------------------
-    (length_of_pendulum2)
-    Meter
-
-    """
-    return 10
-
-
-@cache('run')
-def saveper():
-    """
-    SAVEPER
-    -------
-    (saveper)
-    Second [0,?]
-    The frequency with which output is stored.
-    """
-    return 0.1
-
-
-@cache('run')
-def mass_of_pendulum():
-    """
-    Mass of Pendulum
-    ----------------
-    (mass_of_pendulum)
-    Kilogram
-
-    """
-    return 10
-
-
-@cache('step')
-def _dangular_velocity_dt():
-    """
-    Implicit
-    --------
-    (_dangular_velocity_dt)
-    See docs for angular_velocity
-    Provides derivative for angular_velocity function
-    """
-    return change_in_angular_velocity()
-
-
-@cache('step')
+@component.add(
+    name="Change in Angular Position2",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"angular_velocity2": 1},
+)
 def change_in_angular_position2():
-    """
-    Change in Angular Position2
-    ---------------------------
-    (change_in_angular_position2)
-
-
-    """
     return angular_velocity2()
 
 
-def time():
-    return _t
-functions.time = time
-functions.initial_time = initial_time
+@component.add(
+    name="Length of Pendulum",
+    units="Meter",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def length_of_pendulum():
+    return 10
+
+
+@component.add(
+    name="Length of Pendulum2",
+    units="Meter",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def length_of_pendulum2():
+    return 10
+
+
+@component.add(
+    name="Mass of Pendulum",
+    units="Kilogram",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def mass_of_pendulum():
+    return 10
+
+
+@component.add(
+    name="Mass of Pendulum2",
+    units="Kilogram",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def mass_of_pendulum2():
+    return 10

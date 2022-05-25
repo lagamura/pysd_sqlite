@@ -1,305 +1,264 @@
+"""
+Python model 'SI Model.py'
+Translated using PySD
+"""
 
-"""
-Python model ../../models/Epidemic/SI Model.py
-Translated using PySD version 0.6.4
-"""
-from __future__ import division
+from pathlib import Path
 import numpy as np
-from pysd import utils
 import xarray as xr
 
-from pysd.functions import cache
-from pysd import functions
+from pysd.py_backend.statefuls import Integ
+from pysd import Component
 
-_subscript_dict = {}
+__pysd_version__ = "3.0.0"
 
-_namespace = {
-    'TIME STEP': 'time_step',
-    'Total Population': 'total_population',
-    'FINAL TIME': 'final_time',
-    'Population Infected with Ebola': 'population_infected_with_ebola',
-    'Contact Frequency': 'contact_frequency',
-    'Susceptible Contacts': 'susceptible_contacts',
-    'TIME': 'time',
-    'SAVEPER': 'saveper',
-    'New Reported Cases': 'new_reported_cases',
-    'Infectivity': 'infectivity',
-    'INITIAL TIME': 'initial_time',
-    'Cumulative Reported Cases': 'cumulative_reported_cases',
-    'Time': 'time',
-    'Infection Rate': 'infection_rate',
-    'Probability of Contact with Infected Person': 'probability_of_contact_with_infected_person',
-    'Contacts Between Infected and Uninfected Persons': 'contacts_between_infected_and_uninfected_persons',
-    'Population Susceptible to Ebola': 'population_susceptible_to_ebola'}
+__data = {"scope": None, "time": lambda: 0}
+
+_root = Path(__file__).parent
 
 
-@cache('run')
+component = Component()
+
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
+
+_control_vars = {
+    "initial_time": lambda: 0,
+    "final_time": lambda: 35,
+    "time_step": lambda: 0.125,
+    "saveper": lambda: time_step(),
+}
+
+
+def _init_outer_references(data):
+    for key in data:
+        __data[key] = data[key]
+
+
+@component.add(name="Time")
+def time():
+    """
+    Current time of the model.
+    """
+    return __data["time"]()
+
+
+@component.add(
+    name="FINAL TIME", units="Week", comp_type="Constant", comp_subtype="Normal"
+)
 def final_time():
     """
-    FINAL TIME
-    ----------
-    (final_time)
-    Week
     The final time for the simulation.
     """
-    return 35
+    return __data["time"].final_time()
 
 
-@cache('step')
-def cumulative_reported_cases():
-    """
-    Cumulative Reported Cases
-    -------------------------
-    (cumulative_reported_cases)
-    Persons
-
-    """
-    return _state['cumulative_reported_cases']
-
-
-@cache('run')
-def infectivity():
-    """
-    Infectivity
-    -----------
-    (infectivity)
-    Dmnl [-1,1,0.001]
-
-    """
-    return 0.05
-
-
-@cache('run')
+@component.add(
+    name="INITIAL TIME", units="Week", comp_type="Constant", comp_subtype="Normal"
+)
 def initial_time():
     """
-    INITIAL TIME
-    ------------
-    (initial_time)
-    Week
     The initial time for the simulation.
     """
-    return 0
+    return __data["time"].initial_time()
 
 
-@cache('step')
-def _dpopulation_infected_with_ebola_dt():
+@component.add(
+    name="SAVEPER",
+    units="Week",
+    limits=(0.0, np.nan),
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"time_step": 1},
+)
+def saveper():
     """
-    Implicit
-    --------
-    (_dpopulation_infected_with_ebola_dt)
-    See docs for population_infected_with_ebola
-    Provides derivative for population_infected_with_ebola function
+    The frequency with which output is stored.
     """
+    return __data["time"].saveper()
+
+
+@component.add(
+    name="TIME STEP",
+    units="Week",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def time_step():
+    """
+    The time step for the simulation.
+    """
+    return __data["time"].time_step()
+
+
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
+
+
+@component.add(
+    name="New Reported Cases",
+    units="Persons/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"infection_rate": 1},
+)
+def new_reported_cases():
     return infection_rate()
 
 
-@cache('run')
-def time_step():
+@component.add(
+    name="Population Infected with Ebola",
+    units="Persons",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_population_infected_with_ebola": 1},
+    other_deps={
+        "_integ_population_infected_with_ebola": {
+            "initial": {},
+            "step": {"infection_rate": 1},
+        }
+    },
+)
+def population_infected_with_ebola():
+    return _integ_population_infected_with_ebola()
+
+
+_integ_population_infected_with_ebola = Integ(
+    lambda: infection_rate(), lambda: 1, "_integ_population_infected_with_ebola"
+)
+
+
+@component.add(
+    name="Population Susceptible to Ebola",
+    units="Persons",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_population_susceptible_to_ebola": 1},
+    other_deps={
+        "_integ_population_susceptible_to_ebola": {
+            "initial": {"total_population": 1},
+            "step": {"infection_rate": 1},
+        }
+    },
+)
+def population_susceptible_to_ebola():
     """
-    TIME STEP
-    ---------
-    (time_step)
-    Week [0,?]
-    The time step for the simulation.
+    The Population Susceptible to Ebola is the equal to the population susceptible prior to the onset of the disease less all of those that have contracted it. It is initialized to the Total Effective Population.
     """
-    return 0.125
+    return _integ_population_susceptible_to_ebola()
 
 
-@cache('run')
-def total_population():
-    """
-    Total Population
-    ----------------
-    (total_population)
-    Persons
-
-    """
-    return 7150
+_integ_population_susceptible_to_ebola = Integ(
+    lambda: -infection_rate(),
+    lambda: total_population(),
+    "_integ_population_susceptible_to_ebola",
+)
 
 
-@cache('run')
+@component.add(
+    name="Contact Frequency",
+    units="Persons/Person/Week",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def contact_frequency():
-    """
-    Contact Frequency
-    -----------------
-    (contact_frequency)
-    Persons/Person/Week
-
-    """
     return 7
 
 
-@cache('step')
+@component.add(
+    name="Contacts Between Infected and Uninfected Persons",
+    units="Persons/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "probability_of_contact_with_infected_person": 1,
+        "susceptible_contacts": 1,
+    },
+)
 def contacts_between_infected_and_uninfected_persons():
-    """
-    Contacts Between Infected and Uninfected Persons
-    ------------------------------------------------
-    (contacts_between_infected_and_uninfected_persons)
-    Persons/Week
-
-    """
     return probability_of_contact_with_infected_person() * susceptible_contacts()
 
 
-def _init_cumulative_reported_cases():
-    """
-    Implicit
-    --------
-    (_init_cumulative_reported_cases)
-    See docs for cumulative_reported_cases
-    Provides initial conditions for cumulative_reported_cases function
-    """
-    return 0
+@component.add(
+    name="Cumulative Reported Cases",
+    units="Persons",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_cumulative_reported_cases": 1},
+    other_deps={
+        "_integ_cumulative_reported_cases": {
+            "initial": {},
+            "step": {"new_reported_cases": 1},
+        }
+    },
+)
+def cumulative_reported_cases():
+    return _integ_cumulative_reported_cases()
 
 
-@cache('step')
-def _dcumulative_reported_cases_dt():
-    """
-    Implicit
-    --------
-    (_dcumulative_reported_cases_dt)
-    See docs for cumulative_reported_cases
-    Provides derivative for cumulative_reported_cases function
-    """
-    return new_reported_cases()
+_integ_cumulative_reported_cases = Integ(
+    lambda: new_reported_cases(), lambda: 0, "_integ_cumulative_reported_cases"
+)
 
 
-@cache('step')
-def probability_of_contact_with_infected_person():
-    """
-    Probability of Contact with Infected Person
-    -------------------------------------------
-    (probability_of_contact_with_infected_person)
-    Dmnl
-
-    """
-    return population_infected_with_ebola() / total_population()
-
-
-@cache('step')
-def population_susceptible_to_ebola():
-    """
-    Population Susceptible to Ebola
-    -------------------------------
-    (population_susceptible_to_ebola)
-    Persons
-    The Population Susceptible to Ebola is the equal to the population
-                susceptible prior to the onset of the disease less all of those that have
-                contracted it. It is initialized to the Total Effective Population.
-    """
-    return _state['population_susceptible_to_ebola']
-
-
-def _init_population_susceptible_to_ebola():
-    """
-    Implicit
-    --------
-    (_init_population_susceptible_to_ebola)
-    See docs for population_susceptible_to_ebola
-    Provides initial conditions for population_susceptible_to_ebola function
-    """
-    return total_population()
-
-
-@cache('step')
-def new_reported_cases():
-    """
-    New Reported Cases
-    ------------------
-    (new_reported_cases)
-    Persons/Week
-
-    """
-    return infection_rate()
-
-
-@cache('step')
-def population_infected_with_ebola():
-    """
-    Population Infected with Ebola
-    ------------------------------
-    (population_infected_with_ebola)
-    Persons
-
-    """
-    return _state['population_infected_with_ebola']
-
-
-@cache('step')
-def susceptible_contacts():
-    """
-    Susceptible Contacts
-    --------------------
-    (susceptible_contacts)
-    Persons/Week
-
-    """
-    return contact_frequency() * population_susceptible_to_ebola()
-
-
-@cache('step')
-def saveper():
-    """
-    SAVEPER
-    -------
-    (saveper)
-    Week [0,?]
-    The frequency with which output is stored.
-    """
-    return time_step()
-
-
-@cache('step')
-def _dpopulation_susceptible_to_ebola_dt():
-    """
-    Implicit
-    --------
-    (_dpopulation_susceptible_to_ebola_dt)
-    See docs for population_susceptible_to_ebola
-    Provides derivative for population_susceptible_to_ebola function
-    """
-    return -infection_rate()
-
-
-@cache('step')
-def time():
-    """
-    TIME
-    ----
-    (time)
-    None
-    The time of the model
-    """
-    return _t
-
-
-@cache('step')
+@component.add(
+    name="Infection Rate",
+    units="Persons/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "contacts_between_infected_and_uninfected_persons": 1,
+        "infectivity": 1,
+    },
+)
 def infection_rate():
     """
-    Infection Rate
-    --------------
-    (infection_rate)
-    Persons/Week
-    The infection rate is determined by the total number of contacts between
-                infected and uninfected people each week (Contacts Between Infected and
-                Uninfected Persons), and the probability that each such contact results in
-                transmission from the infected to uninfected person (Infectivity).
+    The infection rate is determined by the total number of contacts between infected and uninfected people each week (Contacts Between Infected and Uninfected Persons), and the probability that each such contact results in transmission from the infected to uninfected person (Infectivity).
     """
     return contacts_between_infected_and_uninfected_persons() * infectivity()
 
 
-def _init_population_infected_with_ebola():
-    """
-    Implicit
-    --------
-    (_init_population_infected_with_ebola)
-    See docs for population_infected_with_ebola
-    Provides initial conditions for population_infected_with_ebola function
-    """
-    return 1
+@component.add(
+    name="Infectivity",
+    units="Dmnl",
+    limits=(-1.0, 1.0, 0.001),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def infectivity():
+    return 0.05
 
 
-def time():
-    return _t
-functions.time = time
-functions.initial_time = initial_time
+@component.add(
+    name="Probability of Contact with Infected Person",
+    units="Dmnl",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"population_infected_with_ebola": 1, "total_population": 1},
+)
+def probability_of_contact_with_infected_person():
+    return population_infected_with_ebola() / total_population()
+
+
+@component.add(
+    name="Susceptible Contacts",
+    units="Persons/Week",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"contact_frequency": 1, "population_susceptible_to_ebola": 1},
+)
+def susceptible_contacts():
+    return contact_frequency() * population_susceptible_to_ebola()
+
+
+@component.add(
+    name="Total Population",
+    units="Persons",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def total_population():
+    return 7150

@@ -4,49 +4,24 @@ Translated using PySD
 """
 
 from pathlib import Path
+import numpy as np
+import xarray as xr
 
 from pysd.py_backend.statefuls import Integ
+from pysd import Component
 
-__pysd_version__ = "2.2.1"
+__pysd_version__ = "3.0.0"
 
 __data = {"scope": None, "time": lambda: 0}
 
 _root = Path(__file__).parent
 
-_subscript_dict = {}
 
-_namespace = {
-    "TIME": "time",
-    "Time": "time",
-    "Characteristic Time": "characteristic_time",
-    "Heat Loss to Room": "heat_loss_to_room",
-    "Room Temperature": "room_temperature",
-    "Teacup Temperature": "teacup_temperature",
-    "FINAL TIME": "final_time",
-    "INITIAL TIME": "initial_time",
-    "SAVEPER": "saveper",
-    "TIME STEP": "time_step",
-}
+component = Component()
 
-_dependencies = {
-    "characteristic_time": {},
-    "heat_loss_to_room": {
-        "teacup_temperature": 1,
-        "room_temperature": 1,
-        "characteristic_time": 1,
-    },
-    "room_temperature": {},
-    "teacup_temperature": {"_integ_teacup_temperature": 1},
-    "final_time": {},
-    "initial_time": {},
-    "saveper": {"time_step": 1},
-    "time_step": {},
-    "_integ_teacup_temperature": {"initial": {}, "step": {"heat_loss_to_room": 1}},
-}
-
-##########################################################################
-#                            CONTROL VARIABLES                           #
-##########################################################################
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
 
 _control_vars = {
     "initial_time": lambda: 0,
@@ -61,125 +36,112 @@ def _init_outer_references(data):
         __data[key] = data[key]
 
 
+@component.add(name="Time")
 def time():
+    """
+    Current time of the model.
+    """
     return __data["time"]()
 
 
+@component.add(
+    name="FINAL TIME", units="Minute", comp_type="Constant", comp_subtype="Normal"
+)
 def final_time():
     """
-    Real Name: FINAL TIME
-    Original Eqn: 30
-    Units: Minute
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
     The final time for the simulation.
     """
     return __data["time"].final_time()
 
 
+@component.add(
+    name="INITIAL TIME", units="Minute", comp_type="Constant", comp_subtype="Normal"
+)
 def initial_time():
     """
-    Real Name: INITIAL TIME
-    Original Eqn: 0
-    Units: Minute
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
     The initial time for the simulation.
     """
     return __data["time"].initial_time()
 
 
+@component.add(
+    name="SAVEPER",
+    units="Minute",
+    limits=(0.0, np.nan),
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"time_step": 1},
+)
 def saveper():
     """
-    Real Name: SAVEPER
-    Original Eqn: TIME STEP
-    Units: Minute
-    Limits: (0.0, None)
-    Type: component
-    Subs: None
-
     The frequency with which output is stored.
     """
     return __data["time"].saveper()
 
 
+@component.add(
+    name="TIME STEP",
+    units="Minute",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def time_step():
     """
-    Real Name: TIME STEP
-    Original Eqn: 0.125
-    Units: Minute
-    Limits: (0.0, None)
-    Type: constant
-    Subs: None
-
     The time step for the simulation.
     """
     return __data["time"].time_step()
 
 
-##########################################################################
-#                             MODEL VARIABLES                            #
-##########################################################################
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
 
 
+@component.add(
+    name="Characteristic Time",
+    units="Minutes",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def characteristic_time():
-    """
-    Real Name: Characteristic Time
-    Original Eqn: 10
-    Units: Minutes
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
-
-    """
     return 10
 
 
+@component.add(
+    name="Heat Loss to Room",
+    units="Degrees/Minute",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "teacup_temperature": 1,
+        "room_temperature": 1,
+        "characteristic_time": 1,
+    },
+)
 def heat_loss_to_room():
     """
-    Real Name: Heat Loss to Room
-    Original Eqn: (Teacup Temperature - Room Temperature) / Characteristic Time
-    Units: Degrees/Minute
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-    This is the rate at which heat flows from the cup into the room. We can
-        ignore it at this point.
+    This is the rate at which heat flows from the cup into the room. We can ignore it at this point.
     """
     return (teacup_temperature() - room_temperature()) / characteristic_time()
 
 
+@component.add(name="Room Temperature", comp_type="Constant", comp_subtype="Normal")
 def room_temperature():
-    """
-    Real Name: Room Temperature
-    Original Eqn: 70
-    Units:
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
-
-    """
     return 70
 
 
+@component.add(
+    name="Teacup Temperature",
+    units="Degrees",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_teacup_temperature": 1},
+    other_deps={
+        "_integ_teacup_temperature": {"initial": {}, "step": {"heat_loss_to_room": 1}}
+    },
+)
 def teacup_temperature():
-    """
-    Real Name: Teacup Temperature
-    Original Eqn: INTEG ( -Heat Loss to Room, 180)
-    Units: Degrees
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-
-    """
     return _integ_teacup_temperature()
 
 

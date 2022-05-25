@@ -1,250 +1,237 @@
+"""
+Python model 'Predator_Prey.py'
+Translated using PySD
+"""
 
-"""
-Python model ../../models/Predator_Prey/Predator_Prey.py
-Translated using PySD version 0.6.1
-"""
-from __future__ import division
+from pathlib import Path
 import numpy as np
-from pysd import utils
 import xarray as xr
 
-from pysd.functions import cache
-from pysd import functions
+from pysd.py_backend.statefuls import Integ
+from pysd import Component
 
-_subscript_dict = {}
+__pysd_version__ = "3.0.0"
 
-_namespace = {
-    'Predator Mortality': 'predator_mortality',
-    'TIME STEP': 'time_step',
-    'INITIAL TIME': 'initial_time',
-    'SAVEPER': 'saveper',
-    'FINAL TIME': 'final_time',
-    'Prey Fertility': 'prey_fertility',
-    'Prey Population': 'prey_population',
-    'Predation Rate': 'predation_rate',
-    'Predator Population': 'predator_population',
-    'Prey Births': 'prey_births',
-    'Predator Food Driven Fertility': 'predator_food_driven_fertility',
-    'Predator Deaths': 'predator_deaths',
-    'Predator Births': 'predator_births',
-    'Prey Deaths': 'prey_deaths'}
+__data = {"scope": None, "time": lambda: 0}
+
+_root = Path(__file__).parent
 
 
-def _init_predator_population():
+component = Component()
+
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
+
+_control_vars = {
+    "initial_time": lambda: 0,
+    "final_time": lambda: 50,
+    "time_step": lambda: 0.015625,
+    "saveper": lambda: time_step(),
+}
+
+
+def _init_outer_references(data):
+    for key in data:
+        __data[key] = data[key]
+
+
+@component.add(name="Time")
+def time():
     """
-    Implicit
-    --------
-    (_init_predator_population)
-    See docs for predator_population
-    Provides initial conditions for predator_population function
+    Current time of the model.
     """
-    return 100
+    return __data["time"]()
 
 
-@cache('step')
-def prey_population():
-    """
-    Prey Population
-    ---------------
-    (prey_population)
-    Prey [0,?]
-
-    """
-    return _state['prey_population']
-
-
-@cache('run')
-def predator_food_driven_fertility():
-    """
-    Predator Food Driven Fertility
-    ------------------------------
-    (predator_food_driven_fertility)
-    Predators/Day/Predator/Prey [0,0.0001,1e-06]
-
-    """
-    return 0.001
-
-
-@cache('run')
-def prey_fertility():
-    """
-    Prey Fertility
-    --------------
-    (prey_fertility)
-    Prey/Day/Prey [0,10,0.1]
-
-    """
-    return 2
-
-
-@cache('run')
+@component.add(
+    name="FINAL TIME", units="Day", comp_type="Constant", comp_subtype="Normal"
+)
 def final_time():
     """
-    FINAL TIME
-    ----------
-    (final_time)
-    Day
     The final time for the simulation.
     """
-    return 50
+    return __data["time"].final_time()
 
 
-@cache('run')
-def predation_rate():
-    """
-    Predation Rate
-    --------------
-    (predation_rate)
-    Prey/Day/Prey/Predator [0,0.0001,1e-05]
-
-    """
-    return 0.0001
-
-
-@cache('step')
-def predator_deaths():
-    """
-    Predator Deaths
-    ---------------
-    (predator_deaths)
-    Predator/Day
-
-    """
-    return predator_mortality() * predator_population()
-
-
-@cache('step')
-def _dprey_population_dt():
-    """
-    Implicit
-    --------
-    (_dprey_population_dt)
-    See docs for prey_population
-    Provides derivative for prey_population function
-    """
-    return prey_births() - prey_deaths()
-
-
-@cache('step')
-def prey_deaths():
-    """
-    Prey Deaths
-    -----------
-    (prey_deaths)
-    Prey/Day
-
-    """
-    return predation_rate() * prey_population() * predator_population()
-
-
-def _init_prey_population():
-    """
-    Implicit
-    --------
-    (_init_prey_population)
-    See docs for prey_population
-    Provides initial conditions for prey_population function
-    """
-    return 250
-
-
-@cache('step')
-def saveper():
-    """
-    SAVEPER
-    -------
-    (saveper)
-    Day [0,?]
-    The frequency with which output is stored.
-    """
-    return time_step()
-
-
-@cache('run')
+@component.add(
+    name="INITIAL TIME", units="Day", comp_type="Constant", comp_subtype="Normal"
+)
 def initial_time():
     """
-    INITIAL TIME
-    ------------
-    (initial_time)
-    Day
     The initial time for the simulation.
     """
-    return 0
+    return __data["time"].initial_time()
 
 
-@cache('step')
-def predator_births():
+@component.add(
+    name="SAVEPER",
+    units="Day",
+    limits=(0.0, np.nan),
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"time_step": 1},
+)
+def saveper():
     """
-    Predator Births
-    ---------------
-    (predator_births)
-    Predator/Day
-
+    The frequency with which output is stored.
     """
-    return predator_food_driven_fertility() * prey_population() * predator_population()
+    return __data["time"].saveper()
 
 
-@cache('step')
-def predator_population():
-    """
-    Predator Population
-    -------------------
-    (predator_population)
-    Predators
-
-    """
-    return _state['predator_population']
-
-
-@cache('step')
-def _dpredator_population_dt():
-    """
-    Implicit
-    --------
-    (_dpredator_population_dt)
-    See docs for predator_population
-    Provides derivative for predator_population function
-    """
-    return predator_births() - predator_deaths()
-
-
-@cache('run')
+@component.add(
+    name="TIME STEP",
+    units="Day",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def time_step():
     """
-    TIME STEP
-    ---------
-    (time_step)
-    Day [0,?]
     The time step for the simulation.
     """
-    return 0.015625
+    return __data["time"].time_step()
 
 
-@cache('step')
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
+
+
+@component.add(
+    name="Prey Births",
+    units="Prey/Day",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"prey_fertility": 1, "prey_population": 1},
+)
 def prey_births():
-    """
-    Prey Births
-    -----------
-    (prey_births)
-    Prey/Day
-
-    """
     return prey_fertility() * prey_population()
 
 
-@cache('run')
-def predator_mortality():
-    """
-    Predator Mortality
-    ------------------
-    (predator_mortality)
-    Predator/Day/Predator [0,1]
+@component.add(
+    name="Predation Rate",
+    units="Prey/Day/Prey/Predator",
+    limits=(0.0, 0.0001, 1e-05),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def predation_rate():
+    return 0.0001
 
-    """
+
+@component.add(
+    name="Prey Deaths",
+    units="Prey/Day",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"predation_rate": 1, "prey_population": 1, "predator_population": 1},
+)
+def prey_deaths():
+    return predation_rate() * prey_population() * predator_population()
+
+
+@component.add(
+    name="Prey Fertility",
+    units="Prey/Day/Prey",
+    limits=(0.0, 10.0, 0.1),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def prey_fertility():
+    return 2
+
+
+@component.add(
+    name="Prey Population",
+    units="Prey",
+    limits=(0.0, np.nan),
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_prey_population": 1},
+    other_deps={
+        "_integ_prey_population": {
+            "initial": {},
+            "step": {"prey_births": 1, "prey_deaths": 1},
+        }
+    },
+)
+def prey_population():
+    return _integ_prey_population()
+
+
+_integ_prey_population = Integ(
+    lambda: prey_births() - prey_deaths(), lambda: 250, "_integ_prey_population"
+)
+
+
+@component.add(
+    name="Predator Births",
+    units="Predator/Day",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "predator_food_driven_fertility": 1,
+        "prey_population": 1,
+        "predator_population": 1,
+    },
+)
+def predator_births():
+    return predator_food_driven_fertility() * prey_population() * predator_population()
+
+
+@component.add(
+    name="Predator Deaths",
+    units="Predator/Day",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"predator_mortality": 1, "predator_population": 1},
+)
+def predator_deaths():
+    return predator_mortality() * predator_population()
+
+
+@component.add(
+    name="Predator Food Driven Fertility",
+    units="Predators/Day/Predator/Prey",
+    limits=(0.0, 0.0001, 1e-06),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def predator_food_driven_fertility():
+    return 0.001
+
+
+@component.add(
+    name="Predator Mortality",
+    units="Predator/Day/Predator",
+    limits=(0.0, 1.0),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def predator_mortality():
     return 0.01
 
 
-def time():
-    return _t
-functions.time = time
-functions.initial_time = initial_time
+@component.add(
+    name="Predator Population",
+    units="Predators",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_predator_population": 1},
+    other_deps={
+        "_integ_predator_population": {
+            "initial": {},
+            "step": {"predator_births": 1, "predator_deaths": 1},
+        }
+    },
+)
+def predator_population():
+    return _integ_predator_population()
+
+
+_integ_predator_population = Integ(
+    lambda: predator_births() - predator_deaths(),
+    lambda: 100,
+    "_integ_predator_population",
+)

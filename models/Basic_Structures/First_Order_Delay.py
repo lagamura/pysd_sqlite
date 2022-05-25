@@ -1,5 +1,5 @@
 """
-Python model 'Atmospheric_Bathtub.py'
+Python model 'First_Order_Delay.py'
 Translated using PySD
 """
 
@@ -98,44 +98,52 @@ def time_step():
 #######################################################################
 
 
-@component.add(name="Emissions", comp_type="Constant", comp_subtype="Normal")
-def emissions():
-    return 0
+@component.add(
+    name="Input",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"test_input": 1},
+)
+def input_1():
+    return test_input()
+
+
+@component.add(name="test input", comp_type="Constant", comp_subtype="Normal")
+def test_input():
+    return 5
+
+
+@component.add(name="Delay", comp_type="Constant", comp_subtype="Normal")
+def delay():
+    return 3
 
 
 @component.add(
-    name="Excess Atmospheric Carbon",
+    name="Delay Buffer",
     comp_type="Stateful",
     comp_subtype="Integ",
-    depends_on={"_integ_excess_atmospheric_carbon": 1},
+    depends_on={"_integ_delay_buffer": 1},
     other_deps={
-        "_integ_excess_atmospheric_carbon": {
-            "initial": {},
-            "step": {"emissions": 1, "natural_removal": 1},
+        "_integ_delay_buffer": {
+            "initial": {"input_1": 1, "delay": 1},
+            "step": {"input_1": 1, "output": 1},
         }
     },
 )
-def excess_atmospheric_carbon():
-    return _integ_excess_atmospheric_carbon()
+def delay_buffer():
+    return _integ_delay_buffer()
 
 
-_integ_excess_atmospheric_carbon = Integ(
-    lambda: emissions() - natural_removal(),
-    lambda: 0,
-    "_integ_excess_atmospheric_carbon",
+_integ_delay_buffer = Integ(
+    lambda: input_1() - output(), lambda: input_1() * delay(), "_integ_delay_buffer"
 )
 
 
 @component.add(
-    name="Natural Removal",
+    name="Output",
     comp_type="Auxiliary",
     comp_subtype="Normal",
-    depends_on={"excess_atmospheric_carbon": 1, "removal_constant": 1},
+    depends_on={"delay_buffer": 1, "delay": 1},
 )
-def natural_removal():
-    return excess_atmospheric_carbon() * removal_constant()
-
-
-@component.add(name="Removal Constant", comp_type="Constant", comp_subtype="Normal")
-def removal_constant():
-    return 0.01
+def output():
+    return delay_buffer() / delay()

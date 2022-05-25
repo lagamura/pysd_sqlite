@@ -4,65 +4,24 @@ Translated using PySD
 """
 
 from pathlib import Path
+import numpy as np
+import xarray as xr
 
 from pysd.py_backend.statefuls import Integ
+from pysd import Component
 
-__pysd_version__ = "2.2.4"
+__pysd_version__ = "3.0.0"
 
 __data = {"scope": None, "time": lambda: 0}
 
 _root = Path(__file__).parent
 
-_subscript_dict = {}
 
-_namespace = {
-    "TIME": "time",
-    "Time": "time",
-    "cumulative cases": "cumulative_cases",
-    "report case": "report_case",
-    "infect": "infect",
-    "contact infectivity": "contact_infectivity",
-    "recovery period": "recovery_period",
-    "infectious": "infectious",
-    "recovered": "recovered",
-    "recover": "recover",
-    "susceptible": "susceptible",
-    "total population": "total_population",
-    "FINAL TIME": "final_time",
-    "INITIAL TIME": "initial_time",
-    "SAVEPER": "saveper",
-    "TIME STEP": "time_step",
-}
+component = Component()
 
-_dependencies = {
-    "cumulative_cases": {"_integ_cumulative_cases": 1},
-    "report_case": {"infect": 1},
-    "infect": {
-        "susceptible": 1,
-        "infectious": 1,
-        "total_population": 1,
-        "contact_infectivity": 1,
-    },
-    "contact_infectivity": {},
-    "recovery_period": {},
-    "infectious": {"_integ_infectious": 1},
-    "recovered": {"_integ_recovered": 1},
-    "recover": {"infectious": 1, "recovery_period": 1},
-    "susceptible": {"_integ_susceptible": 1},
-    "total_population": {},
-    "final_time": {},
-    "initial_time": {},
-    "saveper": {"time_step": 1},
-    "time_step": {},
-    "_integ_cumulative_cases": {"initial": {}, "step": {"report_case": 1}},
-    "_integ_infectious": {"initial": {}, "step": {"infect": 1, "recover": 1}},
-    "_integ_recovered": {"initial": {}, "step": {"recover": 1}},
-    "_integ_susceptible": {"initial": {"total_population": 1}, "step": {"infect": 1}},
-}
-
-##########################################################################
-#                            CONTROL VARIABLES                           #
-##########################################################################
+#######################################################################
+#                          CONTROL VARIABLES                          #
+#######################################################################
 
 _control_vars = {
     "initial_time": lambda: 0,
@@ -77,213 +36,77 @@ def _init_outer_references(data):
         __data[key] = data[key]
 
 
+@component.add(name="Time")
 def time():
+    """
+    Current time of the model.
+    """
     return __data["time"]()
 
 
+@component.add(
+    name="FINAL TIME", units="Day", comp_type="Constant", comp_subtype="Normal"
+)
 def final_time():
     """
-    Real Name: FINAL TIME
-    Original Eqn: 100
-    Units: Day
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
     The final time for the simulation.
     """
     return __data["time"].final_time()
 
 
+@component.add(
+    name="INITIAL TIME", units="Day", comp_type="Constant", comp_subtype="Normal"
+)
 def initial_time():
     """
-    Real Name: INITIAL TIME
-    Original Eqn: 0
-    Units: Day
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
     The initial time for the simulation.
     """
     return __data["time"].initial_time()
 
 
+@component.add(
+    name="SAVEPER",
+    units="Day",
+    limits=(0.0, np.nan),
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"time_step": 1},
+)
 def saveper():
     """
-    Real Name: SAVEPER
-    Original Eqn: TIME STEP
-    Units: Day
-    Limits: (0.0, None)
-    Type: component
-    Subs: None
-
     The frequency with which output is stored.
     """
     return __data["time"].saveper()
 
 
+@component.add(
+    name="TIME STEP",
+    units="Day",
+    limits=(0.0, np.nan),
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
 def time_step():
     """
-    Real Name: TIME STEP
-    Original Eqn: 0.5
-    Units: Day
-    Limits: (0.0, None)
-    Type: constant
-    Subs: None
-
     The time step for the simulation.
     """
     return __data["time"].time_step()
 
 
-##########################################################################
-#                             MODEL VARIABLES                            #
-##########################################################################
+#######################################################################
+#                           MODEL VARIABLES                           #
+#######################################################################
 
 
+@component.add(
+    name="cumulative cases",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_cumulative_cases": 1},
+    other_deps={"_integ_cumulative_cases": {"initial": {}, "step": {"report_case": 1}}},
+)
 def cumulative_cases():
-    """
-    Real Name: cumulative cases
-    Original Eqn: INTEG ( report case, 0)
-    Units:
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-
-    """
     return _integ_cumulative_cases()
-
-
-def report_case():
-    """
-    Real Name: report case
-    Original Eqn: infect
-    Units:
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-
-    """
-    return infect()
-
-
-def infect():
-    """
-    Real Name: infect
-    Original Eqn: susceptible*(infectious/total population) * contact infectivity
-    Units: Persons/Day
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-
-    """
-    return susceptible() * (infectious() / total_population()) * contact_infectivity()
-
-
-def contact_infectivity():
-    """
-    Real Name: contact infectivity
-    Original Eqn: 0.7
-    Units: Persons/Persons/Day
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
-    A joint parameter listing both how many people you contact, and how likely
-        you are to give them the disease.
-    """
-    return 0.7
-
-
-def recovery_period():
-    """
-    Real Name: recovery period
-    Original Eqn: 5
-    Units: Days
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
-    How long are you infectious for?
-    """
-    return 5
-
-
-def infectious():
-    """
-    Real Name: infectious
-    Original Eqn: INTEG ( infect-recover, 5)
-    Units: Persons
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-    The population with the disease, manifesting symptoms, and able to
-        transmit it to other people.
-    """
-    return _integ_infectious()
-
-
-def recovered():
-    """
-    Real Name: recovered
-    Original Eqn: INTEG ( recover, 0)
-    Units: Persons
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-    These people have recovered from the disease. Yay! Nobody dies in this
-        model.
-    """
-    return _integ_recovered()
-
-
-def recover():
-    """
-    Real Name: recover
-    Original Eqn: infectious/recovery period
-    Units: Persons/Day
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-
-    """
-    return infectious() / recovery_period()
-
-
-def susceptible():
-    """
-    Real Name: susceptible
-    Original Eqn: INTEG ( -infect, total population)
-    Units: Persons
-    Limits: (None, None)
-    Type: component
-    Subs: None
-
-    The population that has not yet been infected.
-    """
-    return _integ_susceptible()
-
-
-def total_population():
-    """
-    Real Name: total population
-    Original Eqn: 1000
-    Units: Persons
-    Limits: (None, None)
-    Type: constant
-    Subs: None
-
-    This is just a simplification to make it easer to track how many folks
-        there are without having to sum up all the stocks.
-    """
-    return 1000
 
 
 _integ_cumulative_cases = Integ(
@@ -291,12 +114,137 @@ _integ_cumulative_cases = Integ(
 )
 
 
+@component.add(
+    name="report case",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"infect": 1},
+)
+def report_case():
+    return infect()
+
+
+@component.add(
+    name="infect",
+    units="Persons/Day",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={
+        "susceptible": 1,
+        "total_population": 1,
+        "infectious": 1,
+        "contact_infectivity": 1,
+    },
+)
+def infect():
+    return susceptible() * (infectious() / total_population()) * contact_infectivity()
+
+
+@component.add(
+    name="contact infectivity",
+    units="Persons/Persons/Day",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def contact_infectivity():
+    """
+    A joint parameter listing both how many people you contact, and how likely you are to give them the disease.
+    """
+    return 0.7
+
+
+@component.add(
+    name="recovery period", units="Days", comp_type="Constant", comp_subtype="Normal"
+)
+def recovery_period():
+    """
+    How long are you infectious for?
+    """
+    return 5
+
+
+@component.add(
+    name="infectious",
+    units="Persons",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_infectious": 1},
+    other_deps={
+        "_integ_infectious": {"initial": {}, "step": {"infect": 1, "recover": 1}}
+    },
+)
+def infectious():
+    """
+    The population with the disease, manifesting symptoms, and able to transmit it to other people.
+    """
+    return _integ_infectious()
+
+
 _integ_infectious = Integ(lambda: infect() - recover(), lambda: 5, "_integ_infectious")
+
+
+@component.add(
+    name="recovered",
+    units="Persons",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_recovered": 1},
+    other_deps={"_integ_recovered": {"initial": {}, "step": {"recover": 1}}},
+)
+def recovered():
+    """
+    These people have recovered from the disease. Yay! Nobody dies in this model.
+    """
+    return _integ_recovered()
 
 
 _integ_recovered = Integ(lambda: recover(), lambda: 0, "_integ_recovered")
 
 
+@component.add(
+    name="recover",
+    units="Persons/Day",
+    comp_type="Auxiliary",
+    comp_subtype="Normal",
+    depends_on={"infectious": 1, "recovery_period": 1},
+)
+def recover():
+    return infectious() / recovery_period()
+
+
+@component.add(
+    name="susceptible",
+    units="Persons",
+    comp_type="Stateful",
+    comp_subtype="Integ",
+    depends_on={"_integ_susceptible": 1},
+    other_deps={
+        "_integ_susceptible": {
+            "initial": {"total_population": 1},
+            "step": {"infect": 1},
+        }
+    },
+)
+def susceptible():
+    """
+    The population that has not yet been infected.
+    """
+    return _integ_susceptible()
+
+
 _integ_susceptible = Integ(
     lambda: -infect(), lambda: total_population(), "_integ_susceptible"
 )
+
+
+@component.add(
+    name="total population",
+    units="Persons",
+    comp_type="Constant",
+    comp_subtype="Normal",
+)
+def total_population():
+    """
+    This is just a simplification to make it easer to track how many folks there are without having to sum up all the stocks.
+    """
+    return 1000
