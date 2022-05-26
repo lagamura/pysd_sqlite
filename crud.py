@@ -1,6 +1,6 @@
-from wsgiref.handlers import read_environ
 import pysd
 import pandas as pd
+import json
 
 from datetime import datetime
 import pathlib
@@ -51,8 +51,7 @@ def get_simul_by_id(db:Session, key_id:int ):
     return db.query(models.Simulation).filter(models.Simulation.id == key_id).first()
 
 
-def post_simul(db:Session, model_details: schema.Simul_test):
-    #user_choice = input("Type the model you want to execute: ")
+def post_simul(db:Session, model_details: schema.Simul_post):
     fileDir = f'./models/{model_details.model_name}'
 
     if (not path.exists(fileDir)):
@@ -69,16 +68,15 @@ def post_simul(db:Session, model_details: schema.Simul_test):
         model = pysd.read_vensim(model_path)
 
     df = model.run()
-    result = df.to_json(orient="columns") #creation of json_field stored in sqlite3
+    result = json.load(df.to_json(orient="columns")) #creation of json_field stored in sqlite3
     
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
     csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
     df.to_csv(csv_path)
-    datetime_field = datetime.now(tz=None).strftime("%Y-%m-%dT%H:%M:%S")
     # create db entry
     
-    simulation_res = models.Simulation(simulation_name= model_details.simulation_name, model_name = model_details.model_name, csv_path = csv_path, date = datetime_field, json_data = result )
+    simulation_res = models.Simulation(simulation_name= model_details.simulation_name, model_name = model_details.model_name, csv_path = csv_path, json_data = result )
     db.add(simulation_res) 
 
     db.commit()
@@ -98,30 +96,46 @@ def get_csv_by_id(db:Session, id_query:int):
 
 ### WARNING THIS FUNCTION HAS NOT SCHEMA MODEL ###
 def get_csv_by_name(db:Session, name_query:str):
-    with db(engine) as session:
 
-        res = session.query(models.Simulation).get(name_query)
-        if res:
-            #pd_fetched = pd.read_csv(res.csv_path)
-            return(res.csv_path)
-        else:
-            return("There is no such filename - something went wrong")
+    res = db.query(models.Simulation).get(name_query)
+    if res:
+        #pd_fetched = pd.read_csv(res.csv_path)
+        return(res.csv_path)
+    else:
+        return("There is no such filename - something went wrong")
 
 
 def get_all_csvs(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Simulation).offset(skip).limit(limit).all()
 
-def delete_simul_by_id(db: Session, key_id:int):
+def get_model_namespace(db: Session, model_name:str):
+    try:
+        res = db.query(models.ModelsNamespace).get(model_name)
+        if res:
+            return(res.namespace)
+    except Exception as e:
+        raise Exception(e)
 
+def get_model_docs(db: Session, model_name:str):
+    try:
+        res = db.query(models.ModelsNamespace).get(model_name)
+        if res:
+            return(res.docs)
+    except Exception as e:
+        raise Exception(e)
+
+def delete_simul_by_id(db: Session, key_id:int):
     try:
         db.query(models.Simulation).filter(models.Simulation.id == key_id).delete()
         db.commit()
     except Exception as e:
         raise Exception(e)
 
-'''
-def get_all_models(db: Session):
-    return(os.listdir('/models'))
+def clear_models_table(db: Session):
+        try:
+            db.query(models.ModelsNamespace).delete()
+            db.commit()
+        except Exception as e:
+            raise Exception(e)
 
-'''
         

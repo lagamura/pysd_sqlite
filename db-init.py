@@ -10,8 +10,6 @@ from database import engine
 import models
 
 
-
-
           
 def database_init(db:sessionmaker):
 
@@ -26,16 +24,18 @@ def database_init(db:sessionmaker):
 
         fileExt = r'*.py'
         model_path = list(pathlib.Path(fileDir).glob(fileExt))        
-        print(f'Model path is {model_path}')
         if (model_path):
+            print(f'Model path .py is {model_path}')
             model = pysd.load(model_path[0])
         else:
             fileExt = r'*.mdl'
             model_path = list(pathlib.Path(fileDir).glob(fileExt))
-            print(f'Model path is {model_path}')
+            print(f'Model path .mdl is {model_path}')
             model = pysd.read_vensim(model_path[0])
-       
-        model_res = models.ModelsNamespace(id_name = model_name, namespace = model.namespace)
+
+        df = model.doc
+        docs_json = df.to_json(orient = "table") # Orient Table Schema
+        model_res = models.ModelsNamespace(id_name = model_name, namespace = model.namespace, docs = docs_json)
 
         try:
             instance = db.query(models.ModelsNamespace).filter_by(id_name=model_name).first()
@@ -43,7 +43,7 @@ def database_init(db:sessionmaker):
                 print(f"This Model already exists in db")
                 continue
             db.add(model_res)
-            #db.commit()
+            db.commit()
             print("added into db successfully")
         except:
             # https://stackoverflow.com/questions/63556777/sqlalchemy-add-all-ignore-duplicate-key-integrityerror

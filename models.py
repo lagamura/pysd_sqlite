@@ -23,6 +23,7 @@ class ModelsNamespace(Base):
 
     id_name = Column(String, primary_key=True)
     namespace = Column(JSON)
+    docs = Column(JSON)
 
 
 

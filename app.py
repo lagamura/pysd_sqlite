@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import JSON
+import json
 
 from sqlalchemy.orm import Session
 
@@ -94,9 +95,17 @@ def get_csv_by_name(simul: schema.Get_Simul_by_name, db: Session = Depends(get_d
         return FileResponse(file_path)
     return {"error" :"File not found!"}
 
+@app.get('/get_model_namespace/{model_name}', response_class=JSONResponse)
+def get_model_namespace(model_name:str, db: Session = Depends(get_db) ):
+    return(crud.get_model_namespace(db=db, model_name=model_name))
 
-@app.post('/add_new_simulation', response_model=schema.Simulation)
-def add_new_simulation(simul: schema.Simul_test, db: Session = Depends(get_db)):
+@app.get('/get_model_docs/{model_name}', response_class=JSONResponse)
+def get_model_docs(model_name:str, db: Session = Depends(get_db)):
+    return(json.loads(crud.get_model_docs(db=db, model_name=model_name)))
+
+
+@app.post('/add_new_simulation/{model_name}', response_model=schema.Simulation)
+def add_new_simulation(simul: schema.Simul_post, db: Session = Depends(get_db)):
     return (crud.post_simul(db=db, model_details=simul))
 
 @app.delete('/delete_simul_by_id', response_description="deleted successfully")

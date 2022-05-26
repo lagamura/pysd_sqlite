@@ -1,5 +1,6 @@
 from cgitb import text
 from datetime import datetime
+import json
 from pydantic import BaseModel, Json
 
 class Simulation(BaseModel):
@@ -16,12 +17,18 @@ class Simulation(BaseModel):
 class Simul_add(Simulation):
     pass
 
-class Simul_test(BaseModel):
+class Simul_post(BaseModel):
     model_name: str
     simulation_name: str
+    params:Json
 
     class Config:
         orm_mode = True
+
+class Models_init(BaseModel):
+    id_name: str
+    namespace: Json
+    docs: Json
          
 class Get_Simul_by_name(BaseModel):
     simulation_name: str

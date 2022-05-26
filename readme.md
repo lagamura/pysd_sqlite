@@ -18,3 +18,7 @@ Milestones
 
 TODO:
 1.refactore schema models with base layers
+
+USEFULL COMMANDS:
+
+ALEMBIC:
