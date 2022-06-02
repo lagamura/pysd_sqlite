@@ -9,7 +9,6 @@ from database import engine
 
 import models
 
-
           
 def database_init(db:sessionmaker):
 
@@ -34,7 +33,7 @@ def database_init(db:sessionmaker):
             model = pysd.read_vensim(model_path[0])
 
         df = model.doc
-        docs_json = df.to_json(orient = "table") # Orient Table Schema
+        docs_json = df.to_json(orient = "index") # Orient Table Schema
         model_res = models.ModelsNamespace(id_name = model_name, namespace = model.namespace, docs = docs_json)
 
         try:

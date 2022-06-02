@@ -18,7 +18,8 @@ models.Base.metadata.create_all(bind=engine) ## This already exists in database.
 app = FastAPI(
     title = "Simulation_PySD_Manager",
     description = "Performe CRUD operations on csv files by using this API",
-    version = "0.0.1"
+    version = "0.0.1",
+    #root_path="/api" #this should be fixed
 )
 
 origins = [
@@ -30,7 +31,7 @@ allow_origin_regex = ['.*localhost.*',"http://localhost:3000/.*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = origins,
+    allow_origins = ["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
