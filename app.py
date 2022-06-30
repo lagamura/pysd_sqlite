@@ -81,8 +81,8 @@ def get_csv_by_id(id:int, db: Session = Depends(get_db)):
 @app.get('/get_simul_res_json/{id}', response_class=JSONResponse)
 def get_simul_res_json(id:int, db: Session = Depends(get_db)):
     row = crud.get_simul_by_id(db=db, key_id=id)
-    #print(row.json_data)
-    return JSONResponse(content=row.json_data)
+    content=json.loads(row.json_data) # this needs to be done because we are loading blob data from db
+    return JSONResponse((content))
 
 
 @app.get('/get_simul_by_name', response_model= schema.Simulation)
@@ -105,7 +105,7 @@ def get_model_docs(model_name:str, db: Session = Depends(get_db)):
     return(json.loads(crud.get_model_docs(db=db, model_name=model_name)))
 
 
-@app.post('/add_new_simulation/{model_name}', response_model=schema.Simulation)
+@app.post('/add_new_simulation/', response_model=schema.Simulation)
 def add_new_simulation(simul: schema.Simul_post, db: Session = Depends(get_db)):
     return (crud.post_simul(db=db, model_details=simul))
 

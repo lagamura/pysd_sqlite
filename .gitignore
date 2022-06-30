@@ -51,6 +51,9 @@ web_modules/
 # Optional npm cache directory
 .npm
 
+# db files
+*.db
+
 # Optional eslint cache
 .eslintcache
 
@@ -141,3 +144,4 @@ pack.py
 
 # ignore front-end directory
 frontend-vue/
+foo.db

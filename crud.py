@@ -67,8 +67,15 @@ def post_simul(db:Session, model_details: schema.Simul_post):
         model_path = list(pathlib.Path(fileDir).glob(fileExt))
         model = pysd.read_vensim(model_path)
 
-    df = model.run()
-    result = json.load(df.to_json(orient="columns")) #creation of json_field stored in sqlite3
+
+    if (model_details.params is None):
+        df = model.run()
+    else:
+        print(model_details.params)
+        #model_details.params = "{\"room_temperature\":20}"
+        df = model.run(params=json.loads(model_details.params))
+
+    result = df.to_json(orient="columns") # json.load() removed. creation of json_field stored in sqlite3
     
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
