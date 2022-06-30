@@ -2,6 +2,7 @@ from cgitb import text
 from datetime import datetime
 import json
 from pydantic import BaseModel, Json
+from typing import(Optional)
 
 class Simulation(BaseModel):
     id: int
@@ -20,7 +21,7 @@ class Simul_add(Simulation):
 class Simul_post(BaseModel):
     model_name: str
     simulation_name: str
-    params:Json
+    params: str | None = None
 
     class Config:
         orm_mode = True
