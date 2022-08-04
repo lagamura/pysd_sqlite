@@ -109,16 +109,15 @@ def get_model_docs(model_name:str, db: Session = Depends(get_db)):
 def add_new_simulation(simul: schema.Simul_post, db: Session = Depends(get_db)):
     return (crud.post_simul(db=db, model_details=simul))
 
-@app.delete('/delete_simul_by_id', response_description="deleted successfully")
+@app.delete('/delete_simul_by_id/{key_id}', response_description="deleted successfully")
 def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):
     res = crud.get_simul_by_id(db=db, key_id=key_id)
-
 
     if not res:
         raise HTTPException(status_code=404, detail=f"No record found to delete")
 
     try:
-        crud.delete_csv_by_id(db=db, key_id=key_id)
+        crud.delete_simul_by_id(db=db, key_id=key_id)
         fileDir = res.csv_path
         os.remove(fileDir)
     except Exception as e:

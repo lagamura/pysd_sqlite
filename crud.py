@@ -72,8 +72,7 @@ def post_simul(db:Session, model_details: schema.Simul_post):
         df = model.run()
     else:
         print(f'model_details params are: {model_details.params}')
-        #model_details.params = "{\"room_temperature\":20}"
-        df = model.run(params=json.loads(model_details.params))
+        df = model.run(params=(model_details.params))
 
     result = df.to_json(orient="columns") # json.load() removed. creation of json_field stored in sqlite3
     
@@ -83,7 +82,13 @@ def post_simul(db:Session, model_details: schema.Simul_post):
     df.to_csv(csv_path)
     # create db entry
     
-    simulation_res = models.Simulation(simulation_name= model_details.simulation_name, model_name = model_details.model_name, csv_path = csv_path, json_data = result )
+    simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
+    model_name = model_details.model_name, 
+    csv_path = csv_path, 
+    json_data = result,
+    params = model_details.params
+    
+     )
     db.add(simulation_res) 
 
     db.commit()

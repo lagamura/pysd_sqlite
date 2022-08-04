@@ -1,4 +1,5 @@
 # from xmlrpc.client import DateTime
+from pydantic import Json
 from sqlalchemy import Column, Integer, String, JSON, DateTime
 from database import Base, SessionLocal
 from datetime import datetime
@@ -11,8 +12,9 @@ class Simulation(Base):
     model_name = Column(String(30), nullable=False)
     simulation_name = Column(String(30), nullable=False)
     csv_path = Column(String(50))
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=datetime.now(tz=None))
     json_data =  Column(JSON)
+    params = Column(JSON)
 
     def __repr__(self):
         return f"simulation_object_represantation(id={self.id!r}, simul_name={self.simulation_name!r}, csv_path={self.csv_path!r}, date={self.date!r})"

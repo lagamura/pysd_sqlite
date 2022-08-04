@@ -11,17 +11,17 @@ class Simulation(BaseModel):
     csv_path: str
     date: datetime
     json_data: Json
+    params: dict | None
 
     class Config:
         orm_mode = True
 
-class Simul_add(Simulation):
-    pass
-
 class Simul_post(BaseModel):
+    user: str
+    timestamp: datetime
     model_name: str
     simulation_name: str
-    params: str | None = None #this is an object of key-value pairs. Maybe should be changed
+    params: dict | None #this is an object of key-value pairs. Maybe should be changed
 
     class Config:
         orm_mode = True
