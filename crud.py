@@ -71,7 +71,7 @@ def post_simul(db:Session, model_details: schema.Simul_post):
     if (model_details.params is None):
         df = model.run()
     else:
-        print(model_details.params)
+        print(f'model_details params are: {model_details.params}')
         #model_details.params = "{\"room_temperature\":20}"
         df = model.run(params=json.loads(model_details.params))
 

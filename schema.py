@@ -21,7 +21,7 @@ class Simul_add(Simulation):
 class Simul_post(BaseModel):
     model_name: str
     simulation_name: str
-    params: str | None = None
+    params: str | None = None #this is an object of key-value pairs. Maybe should be changed
 
     class Config:
         orm_mode = True
