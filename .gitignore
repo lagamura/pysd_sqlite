@@ -145,3 +145,4 @@ pack.py
 # ignore front-end directory
 frontend-vue/
 foo.db
+foo.db
