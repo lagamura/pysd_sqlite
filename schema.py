@@ -1,6 +1,7 @@
 from cgitb import text
 from datetime import datetime
 import json
+import numbers
 from pydantic import BaseModel, Json
 from typing import(Optional)
 
@@ -22,7 +23,8 @@ class Simul_post(BaseModel):
     model_name: str
     simulation_name: str
     params: dict | None #this is an object of key-value pairs. Maybe should be changed
-
+    start_time: float
+    end_time: float
     class Config:
         orm_mode = True
 

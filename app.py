@@ -8,12 +8,16 @@ from sqlalchemy.orm import Session
 
 import os
 import crud
-import models
 import schema
-from database import SessionLocal, engine
+from database import SessionLocal
 
+'''
+import models
+from database import engine
 
+#this only needs on initialization
 models.Base.metadata.create_all(bind=engine) ## This already exists in database.py probably should be deleted
+'''
 
 app = FastAPI(
     title = "Simulation_PySD_Manager",
@@ -106,8 +110,8 @@ def get_model_docs(model_name:str, db: Session = Depends(get_db)):
 
 
 @app.post('/add_new_simulation/', response_model=schema.Simulation)
-def add_new_simulation(simul: schema.Simul_post, db: Session = Depends(get_db)):
-    return (crud.post_simul(db=db, model_details=simul))
+def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Session = Depends(get_db)):
+    return (crud.run_simul(db=db, model_details=simul, step_run=step_run))
 
 @app.delete('/delete_simul_by_id/{key_id}', response_description="deleted successfully")
 def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):

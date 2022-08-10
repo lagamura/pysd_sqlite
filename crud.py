@@ -1,3 +1,4 @@
+from turtle import reset
 import pysd
 import pandas as pd
 import json
@@ -51,7 +52,8 @@ def get_simul_by_id(db:Session, key_id:int ):
     return db.query(models.Simulation).filter(models.Simulation.id == key_id).first()
 
 
-def post_simul(db:Session, model_details: schema.Simul_post):
+def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
+
     fileDir = f'./models/{model_details.model_name}'
 
     if (not path.exists(fileDir)):
@@ -67,14 +69,35 @@ def post_simul(db:Session, model_details: schema.Simul_post):
         model_path = list(pathlib.Path(fileDir).glob(fileExt))
         model = pysd.read_vensim(model_path)
 
-
-    if (model_details.params is None):
-        df = model.run()
+    # Here starts the model run part
+    if (step_run):
+        if(path.exists("./user/results/pickles/final_state.pic")):
+            df = model.run(initial_condition="./user/results/pickles/final_state.pic", return_timestamps=[model_details.start_time, model_details.end_time],params=(model_details.params))
+        else:
+            df = model.run(params=(model_details.params),return_timestamps=(model["INITIAL TIME"] + model["TIME STEP"]))
     else:
         print(f'model_details params are: {model_details.params}')
         df = model.run(params=(model_details.params))
 
-    result = df.to_json(orient="columns") # json.load() removed. creation of json_field stored in sqlite3
+    # Output Part
+    os.makedirs(f'./user/results/pickles/', exist_ok=True)
+
+    model.export("./user/results/pickles/final_state.pic")
+
+    if(step_run):
+        res = db.query(models.Simulation.json_data)[-1]
+        #query = db.query(models.Simulation.json_data).order_by(Courses.courses_now)[-1]
+        # Serializing json
+        
+        # Writing to sample.json
+        with open("res.json", "w") as outfile:
+            outfile.write(res)
+
+        #prev_result = db(query)
+        #result = (df.to_json(orient="columns")) | prev_result # json.load() removed. creation of json_field stored in sqlite3
+    else:
+        result = df.to_json(orient="columns") # json.load() removed. creation of json_field stored in sqlite3
+
     
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
