@@ -12,7 +12,7 @@ class Simulation(BaseModel):
     csv_path: str
     date: datetime
     json_data: Json
-    params: dict | None
+    params: Json | dict | None #this should be specified
 
     class Config:
         orm_mode = True

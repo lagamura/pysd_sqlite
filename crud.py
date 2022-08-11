@@ -69,51 +69,61 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
         model_path = list(pathlib.Path(fileDir).glob(fileExt))
         model = pysd.read_vensim(model_path)
 
+     #cur_step as an integer - (0...1..2...N)
+    cur_step = int((model_details.end_time - model["INITIAL TIME"] - model["TIME STEP"])/model["TIME STEP"])
+
     # Here starts the model run part
     if (step_run):
-        if(path.exists("./user/results/pickles/final_state.pic")):
-            df = model.run(initial_condition="./user/results/pickles/final_state.pic", return_timestamps=[model_details.start_time, model_details.end_time],params=(model_details.params))
+        if(cur_step > 0): #path.exists("./user/results/pickles/final_state.pic")
+            print(f'N_th run of Simulation:({model_details.start_time}, {model_details.end_time})')
+            df = model.run(initial_condition="./user/results/pickles/final_state.pic", return_timestamps=(model_details.end_time),params=(model_details.params))
+
         else:
-            df = model.run(params=(model_details.params),return_timestamps=(model["INITIAL TIME"] + model["TIME STEP"]))
+            print(f'1st Run of Simulation:({model["INITIAL TIME"]},{model["TIME STEP"]})')
+            df = model.run(params=(model_details.params),return_timestamps=(model["INITIAL TIME"],model["TIME STEP"]))
+            print(df)
+  
     else:
         print(f'model_details params are: {model_details.params}')
         df = model.run(params=(model_details.params))
 
     # Output Part
     os.makedirs(f'./user/results/pickles/', exist_ok=True)
-
     model.export("./user/results/pickles/final_state.pic")
 
-    if(step_run):
-        res = db.query(models.Simulation.json_data)[-1]
-        #query = db.query(models.Simulation.json_data).order_by(Courses.courses_now)[-1]
-        # Serializing json
-        
-        # Writing to sample.json
-        with open("res.json", "w") as outfile:
-            outfile.write(res)
-
-        #prev_result = db(query)
-        #result = (df.to_json(orient="columns")) | prev_result # json.load() removed. creation of json_field stored in sqlite3
+    if(cur_step>0):
+        data_as_dict = df.to_dict() # storing for merging in step run
+        f = open(f'step_{cur_step-1}.json')
+        dict_before = json.load(f)
+        result = mergeStepDicts(dict_before,data_as_dict)
+        print(mergeStepDicts(dict_before,data_as_dict))
     else:
-        result = df.to_json(orient="columns") # json.load() removed. creation of json_field stored in sqlite3
+        data_as_dict = df.to_dict() # storing for merging in step run
+        result = data_as_dict
 
-    
+
+
+    #result = (df.to_json(orient="columns")) # sending from API data
+    if(step_run):
+        with open(f'step_{cur_step}.json', 'w') as convert_file:
+            convert_file.write(json.dumps(result))
+
+    ### CSV PART ##
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
     csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
     df.to_csv(csv_path)
+    ### END ###
+
     # create db entry
-    
     simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
     model_name = model_details.model_name, 
     csv_path = csv_path, 
-    json_data = result,
+    json_data = json.dumps(result),
     params = model_details.params
-    
-     )
+    )
     db.add(simulation_res) 
-
+    # DISABLED temporarily
     db.commit()
     print(f'Id is: {simulation_res.id}')
 
@@ -173,4 +183,11 @@ def clear_models_table(db: Session):
         except Exception as e:
             raise Exception(e)
 
-        
+
+### HELPOUT functions ###
+
+def mergeStepDicts(dict_1, dict_2):
+    dict_3={}
+    for dict_comp in dict_1:
+        dict_3[dict_comp] = {**dict_1[dict_comp] , **dict_2[dict_comp]}
+    return dict_3       
