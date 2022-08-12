@@ -108,6 +108,10 @@ def get_model_namespace(model_name:str, db: Session = Depends(get_db) ):
 def get_model_docs(model_name:str, db: Session = Depends(get_db)):
     return(json.loads(crud.get_model_docs(db=db, model_name=model_name)))
 
+@app.get('/get_csv_results', response_class=FileResponse)
+def get_csv_results(db: Session = Depends(get_db)):
+    file_path = crud.get_last_entry(db=db).csv_path
+    return FileResponse(file_path, media_type="text/csv")
 
 @app.post('/add_new_simulation/', response_model=schema.Simulation)
 def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Session = Depends(get_db)):

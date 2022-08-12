@@ -51,6 +51,8 @@ def get_simul_by_name(db:Session, name_query: str):
 def get_simul_by_id(db:Session, key_id:int ):
     return db.query(models.Simulation).filter(models.Simulation.id == key_id).first()
 
+def get_last_entry(db:Session):
+    return db.query(models.Simulation).order_by(models.Simulation.id.desc()).first()
 
 def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
 
@@ -81,11 +83,14 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
         else:
             print(f'1st Run of Simulation:({model["INITIAL TIME"]},{model["TIME STEP"]})')
             df = model.run(params=(model_details.params),return_timestamps=(model["INITIAL TIME"],model["TIME STEP"]))
-            print(df)
+            #print(df)
   
     else:
         print(f'model_details params are: {model_details.params}')
-        df = model.run(params=(model_details.params))
+        if(path.exists("./user/results/pickles/final_state.pic")):
+            df = model.run(initial_condition="./user/results/pickles/final_state.pic", params=(model_details.params))
+        else:
+            df = model.run(params=(model_details.params))
 
     # Output Part
     os.makedirs(f'./user/results/pickles/', exist_ok=True)
@@ -93,39 +98,46 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
 
     if(cur_step>0):
         data_as_dict = df.to_dict() # storing for merging in step run
-        f = open(f'step_{cur_step-1}.json')
+        f = open(f'./user/results/simulation_state.json')
         dict_before = json.load(f)
         result = mergeStepDicts(dict_before,data_as_dict)
-        print(mergeStepDicts(dict_before,data_as_dict))
+        #print(mergeStepDicts(dict_before,data_as_dict))
     else:
         data_as_dict = df.to_dict() # storing for merging in step run
         result = data_as_dict
 
 
-
     #result = (df.to_json(orient="columns")) # sending from API data
     if(step_run):
-        with open(f'step_{cur_step}.json', 'w') as convert_file:
+        with open(f'./user/results/simulation_state.json', 'w') as convert_file:
             convert_file.write(json.dumps(result))
 
-    ### CSV PART ##
-    os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
-    #print(getListOfMdls(os.path.join(os.curdir,'models')))
-    csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
-    df.to_csv(csv_path)
-    ### END ###
+        # create db entry
 
-    # create db entry
+
+    ### CSV PART ##
+    print(f'cur_step={cur_step}')
+
     simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
     model_name = model_details.model_name, 
-    csv_path = csv_path, 
+    csv_path = None, 
     json_data = json.dumps(result),
     params = model_details.params
     )
-    db.add(simulation_res) 
-    # DISABLED temporarily
-    db.commit()
-    print(f'Id is: {simulation_res.id}')
+
+    if((cur_step*model["TIME STEP"]) == (model["FINAL TIME"]-1) or step_run==False):
+        os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
+        #print(getListOfMdls(os.path.join(os.curdir,'models')))
+        simulation_res.csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
+        df.to_csv(simulation_res.csv_path)
+        ### END ###
+
+
+        db.add(simulation_res) 
+        # DISABLED temporarily
+        db.commit()
+        print(f'Id is: {simulation_res.id}')
+        os.remove(pathlib.Path("./user/results/pickles/final_state.pic"))
 
     return(simulation_res)
 
@@ -168,6 +180,9 @@ def get_model_docs(db: Session, model_name:str):
             return(res.docs)
     except Exception as e:
         raise Exception(e)
+
+# def get_components_values(model_name:str): #test to avoid using db
+
 
 def delete_simul_by_id(db: Session, key_id:int):
     try:

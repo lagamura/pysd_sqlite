@@ -6,11 +6,11 @@ from pydantic import BaseModel, Json
 from typing import(Optional)
 
 class Simulation(BaseModel):
-    id: int
+    id: int | None
     model_name: str
     simulation_name: str
-    csv_path: str
-    date: datetime
+    csv_path: str | None
+    date: datetime | None
     json_data: Json
     params: Json | dict | None #this should be specified
 
