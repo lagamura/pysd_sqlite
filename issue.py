@@ -8,3 +8,7 @@
 # print(model._stateful_elements)
 # sub_dict = getattr(model.components,"teacup_temperature", {})
 # print(sub_dict)
+import sys
+sys.implementation.name
+
+print(sys.implementation.version)
