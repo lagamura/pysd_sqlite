@@ -7,9 +7,9 @@ import json
 from sqlalchemy.orm import Session
 
 import os
-import crud
-import schema
-from database import SessionLocal
+import crud, models, schema
+
+from database import SessionLocal, engine
 
 '''
 import models
@@ -18,6 +18,7 @@ from database import engine
 #this only needs on initialization
 models.Base.metadata.create_all(bind=engine) ## This already exists in database.py probably should be deleted
 '''
+models.Base.metadata.create_all(engine)
 
 app = FastAPI(
     title = "Simulation_PySD_Manager",

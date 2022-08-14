@@ -3,14 +3,17 @@ import os
 from os import path
 import pathlib
 
-from sqlalchemy.orm import Session,  sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy.orm import   sessionmaker
 from database import engine
 
 import models
 
           
 def database_init(db:sessionmaker):
+    '''
+    This script should be executed inside the src directory in order to work. Otherwise the values should be changed
+    Probably, should be generalized for relative paths.
+    '''
 
     print("Initializing Database Models Table...")
     

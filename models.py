@@ -1,7 +1,6 @@
 # from xmlrpc.client import DateTime
-from pydantic import Json
 from sqlalchemy import Column, Integer, String, JSON, DateTime
-from database import Base, SessionLocal
+from database import Base
 from datetime import datetime
 
 class Simulation(Base):
