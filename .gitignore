@@ -147,3 +147,4 @@ frontend-vue/
 *.db
 
 foo.db
+test.py

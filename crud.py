@@ -70,8 +70,10 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
         model = pysd.read_vensim(model_path)
 
      #cur_step as an integer - (0...1..2...N)
-    cur_step = int((model_details.end_time - model["INITIAL TIME"] - model["TIME STEP"])/model["TIME STEP"])
-
+    if (step_run):
+        cur_step = int((model_details.end_time - model["INITIAL TIME"] - model["TIME STEP"])/model["TIME STEP"])
+    else:
+        cur_step = 0
     # Here starts the model run part
     if (step_run):
         if(cur_step > 0): #path.exists("./user/results/pickles/final_state.pic")
@@ -85,7 +87,7 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
   
     else:
         print(f'model_details params are: {model_details.params}')
-        if(path.exists("./user/results/pickles/final_state.pic")):
+        if(cur_step>0): #cur_step > 0
             df = model.run(initial_condition="./user/results/pickles/final_state.pic", params=(model_details.params))
         else:
             df = model.run(params=(model_details.params))
@@ -121,42 +123,32 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
     )
 
     if((cur_step*model["TIME STEP"]) == (model["FINAL TIME"]-1) or step_run==False):
-        os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
-        #print(getListOfMdls(os.path.join(os.curdir,'models')))
-        simulation_res.csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
-        
-        ### CSV PART ##
-        #df.to_csv(simulation_res.csv_path)
-        f = open(f'./user/results/simulation_state.json')
-        df = pd.read_json(f,orient='columns')
-        df.to_csv(simulation_res.csv_path)
-        ### END ###
-
-
-        db.add(simulation_res) 
-        # DISABLED temporarily
-        db.commit()
-        print(f'Id is: {simulation_res.id}')
         os.remove(pathlib.Path("./user/results/pickles/final_state.pic"))
 
     return(simulation_res)
 
 def save_results(db:Session, model_details: schema.Simul_post):
 
-    f = open(f'./user/results/simulation_state.json')
-    result = json.load(f)
-
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
-    simulation_res.csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
+    csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
+    
+    try:
+        f = open(f'./user/results/simulation_state.json')
+    except Exception as e:
+        raise Exception(e)
 
-    df = pd.read_json(f)
-    df.to_csv(simulation_res.csv_path)
+    df = pd.read_json(f, orient='columns')
+    df.to_csv(csv_path)
     ### END ###
+
+    f = open(f'./user/results/simulation_state.json')
+    dict_res = json.load(f) ### BUUGGGGGGG
+    result  = dict_res   
 
     simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
     model_name = model_details.model_name, 
-    csv_path = None,
+    csv_path = csv_path,
     json_data = json.dumps(result),
     params = model_details.params
     )
@@ -165,7 +157,8 @@ def save_results(db:Session, model_details: schema.Simul_post):
     # DISABLED temporarily
     db.commit()
     print(f'Id is: {simulation_res.id}')
-    os.remove(pathlib.Path("./user/results/pickles/final_state.pic"))
+    
+    return(True)
 
 
 ### WARNING THIS FUNCTION HAS NOT SCHEMA MODEL ###
