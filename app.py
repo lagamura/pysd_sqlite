@@ -114,6 +114,10 @@ def get_csv_results(db: Session = Depends(get_db)):
     file_path = crud.get_last_entry(db=db).csv_path
     return FileResponse(file_path, media_type="text/csv")
 
+@app.get('/get_components_values/{model_name}')
+def get_components_values(model_name:str):
+    return(crud.get_components_values(model_name=model_name))
+
 @app.post('/add_new_simulation/', response_model=schema.Simulation)
 def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Session = Depends(get_db)):
     return (crud.run_simul(db=db, model_details=simul, step_run=step_run))
