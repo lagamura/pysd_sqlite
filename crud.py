@@ -26,7 +26,6 @@ def database_init(db:Session):
 
         fileExt = r'*.py'
         model_path = list(pathlib.Path(fileDir).glob(fileExt))        
-        #print (model_path)
         if (model_path):
             model = pysd.load(model_path[0])
         else:
@@ -63,7 +62,6 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
 
     fileExt = r'*.py'
     model_path = list(pathlib.Path(fileDir).glob(fileExt))        
-    #print (model_path)
     if (model_path):
         model = pysd.load(model_path[0])
     else:
@@ -101,21 +99,18 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
         f = open(f'./user/results/simulation_state.json')
         dict_before = json.load(f)
         result = mergeStepDicts(dict_before,data_as_dict)
-        #print(mergeStepDicts(dict_before,data_as_dict))
     else:
         data_as_dict = df.to_dict() # storing for merging in step run
         result = data_as_dict
 
 
     #result = (df.to_json(orient="columns")) # sending from API data
-    if(step_run):
-        with open(f'./user/results/simulation_state.json', 'w') as convert_file:
-            convert_file.write(json.dumps(result))
+    with open(f'./user/results/simulation_state.json', 'w') as convert_file:
+        convert_file.write(json.dumps(result))
 
         # create db entry
 
 
-    ### CSV PART ##
     print(f'cur_step={cur_step}')
 
     simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
@@ -129,6 +124,11 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
         os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
         #print(getListOfMdls(os.path.join(os.curdir,'models')))
         simulation_res.csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
+        
+        ### CSV PART ##
+        #df.to_csv(simulation_res.csv_path)
+        f = open(f'./user/results/simulation_state.json')
+        df = pd.read_json(f,orient='columns')
         df.to_csv(simulation_res.csv_path)
         ### END ###
 
@@ -140,6 +140,33 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
         os.remove(pathlib.Path("./user/results/pickles/final_state.pic"))
 
     return(simulation_res)
+
+def save_results(db:Session, model_details: schema.Simul_post):
+
+    f = open(f'./user/results/simulation_state.json')
+    result = json.load(f)
+
+    os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
+    #print(getListOfMdls(os.path.join(os.curdir,'models')))
+    simulation_res.csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
+
+    df = pd.read_json(f)
+    df.to_csv(simulation_res.csv_path)
+    ### END ###
+
+    simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
+    model_name = model_details.model_name, 
+    csv_path = None,
+    json_data = json.dumps(result),
+    params = model_details.params
+    )
+
+    db.add(simulation_res) 
+    # DISABLED temporarily
+    db.commit()
+    print(f'Id is: {simulation_res.id}')
+    os.remove(pathlib.Path("./user/results/pickles/final_state.pic"))
+
 
 ### WARNING THIS FUNCTION HAS NOT SCHEMA MODEL ###
 def get_csv_by_id(db:Session, id_query:int):
@@ -181,8 +208,30 @@ def get_model_docs(db: Session, model_name:str):
     except Exception as e:
         raise Exception(e)
 
-# def get_components_values(model_name:str): #test to avoid using db
+def get_components_values(model_name:str): #test to avoid using db
+    
+    results_dict = {}
+    fileDir = f'./models/{model_name}'
 
+    if (not path.exists(fileDir)):
+        raise Exception("There is not such a name model")
+
+    fileExt = r'*.py'
+    model_path = list(pathlib.Path(fileDir).glob(fileExt))        
+    #print (model_path)
+    if (model_path):
+        model = pysd.load(model_path[0])
+    else:
+        fileExt = r'*.mdl'
+        model_path = list(pathlib.Path(fileDir).glob(fileExt))
+        model = pysd.read_vensim(model_path)
+
+    for component_name in model.doc["Real Name"]:
+        results_dict.update({component_name: model[component_name]})
+        
+    print(results_dict)
+
+    return(results_dict)
 
 def delete_simul_by_id(db: Session, key_id:int):
     try:

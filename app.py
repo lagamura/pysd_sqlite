@@ -122,6 +122,10 @@ def get_components_values(model_name:str):
 def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Session = Depends(get_db)):
     return (crud.run_simul(db=db, model_details=simul, step_run=step_run))
 
+@app.post('/save_results/', )
+def add_new_simulation(simul: schema.Simul_post,db: Session = Depends(get_db)):
+    return (crud.save_simul_data(db=db, model_details=simul))
+
 @app.delete('/delete_simul_by_id/{key_id}', response_description="deleted successfully")
 def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):
     res = crud.get_simul_by_id(db=db, key_id=key_id)
