@@ -122,7 +122,7 @@ def get_components_values(model_name:str):
 def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Session = Depends(get_db)):
     return (crud.run_simul(db=db, model_details=simul, step_run=step_run))
 
-@app.post('/save_results/', )
+@app.post('/save_results', )
 def save_results(simul: schema.Simul_post,db: Session = Depends(get_db)):
     return (crud.save_results(db=db, model_details=simul))
 
