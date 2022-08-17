@@ -1,4 +1,3 @@
-from turtle import reset
 import pysd
 import pandas as pd
 import json
