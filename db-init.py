@@ -15,6 +15,8 @@ def database_init(db:sessionmaker):
     Probably, should be generalized for relative paths.
     '''
 
+    #models.Base.metadata.create_all(engine)
+
     print("Initializing Database Models Table...")
     
     models_list = os.listdir('models')

@@ -18,7 +18,7 @@ from database import engine
 #this only needs on initialization
 models.Base.metadata.create_all(bind=engine) ## This already exists in database.py probably should be deleted
 '''
-models.Base.metadata.create_all(engine)
+#models.Base.metadata.create_all(engine)
 
 app = FastAPI(
     title = "Simulation_PySD_Manager",
