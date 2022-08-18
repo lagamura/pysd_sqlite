@@ -36,7 +36,7 @@ allow_origin_regex = ['.*localhost.*',"http://localhost:3000/.*","https://pysims
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = allow_origin_regex,
+    allow_origins = ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
