@@ -73,6 +73,9 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
         cur_step = int((model_details.end_time - model["INITIAL TIME"] - model["TIME STEP"])/model["TIME STEP"])
     else:
         cur_step = 0
+
+    print(f'cur_step is:{cur_step}')
+    
     # Here starts the model run part
     if (step_run):
         if(cur_step > 0): #path.exists("./user/results/pickles/final_state.pic")
@@ -121,9 +124,6 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
     params = model_details.params
     )
 
-    if((cur_step*model["TIME STEP"]) == (model["FINAL TIME"]-1) or step_run==False):
-        os.remove(pathlib.Path("./user/results/pickles/final_state.pic"))
-
     return(simulation_res)
 
 def save_results(db:Session, model_details: schema.Simul_post):
@@ -142,7 +142,7 @@ def save_results(db:Session, model_details: schema.Simul_post):
     ### END ###
 
     f = open(f'./user/results/simulation_state.json')
-    dict_res = json.load(f) ### BUUGGGGGGG
+    dict_res = json.load(f) ### BUUGGGGGGG WITH SOME DUPLICATE KEYS ON MERGING
     result  = dict_res   
 
     simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
@@ -153,7 +153,6 @@ def save_results(db:Session, model_details: schema.Simul_post):
     )
 
     db.add(simulation_res) 
-    # DISABLED temporarily
     db.commit()
     print(f'Id is: {simulation_res.id}')
     
@@ -221,7 +220,7 @@ def get_components_values(model_name:str): #test to avoid using db
     for component_name in model.doc["Real Name"]:
         results_dict.update({component_name: model[component_name]})
         
-    print(results_dict)
+    #print(results_dict)
 
     return(results_dict)
 

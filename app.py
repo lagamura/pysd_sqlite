@@ -75,7 +75,6 @@ def get_simuls(db: Session = Depends(get_db)):
 @app.get('/get_simul_by_id/{id}', response_model= schema.Simulation)
 def get_simul_by_id(id:int, db: Session = Depends(get_db)):
     obj = crud.get_simul_by_id(db=db, key_id=id)
-    #input("Await------------------------\n")
     return(obj)
 
 @app.get('/get_csv_by_id/{id}', response_class=FileResponse)
