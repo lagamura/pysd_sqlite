@@ -108,9 +108,12 @@ def get_model_namespace(model_name:str, db: Session = Depends(get_db) ):
 def get_model_docs(model_name:str, db: Session = Depends(get_db)):
     return(json.loads(crud.get_model_docs(db=db, model_name=model_name)))
 
-@app.get('/get_csv_results', response_class=FileResponse)
-def get_csv_results(db: Session = Depends(get_db)):
-    file_path = crud.get_last_entry(db=db).csv_path
+@app.get('/get_csv_results/{model_name}', response_class=FileResponse)
+def get_csv_results(model_name: str):
+    #file_path = crud.get_last_entry(db=db).csv_path #get from database
+
+    file_path = crud.get_last_csv_filesys(model_name=model_name)
+
     return FileResponse(file_path, media_type="text/csv")
 
 @app.get('/get_components_values/{model_name}')

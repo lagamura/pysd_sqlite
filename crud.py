@@ -6,6 +6,7 @@ from datetime import datetime
 import pathlib
 import os
 from os import path
+import glob
 
 from database import engine
 from sqlalchemy.orm import Session
@@ -51,6 +52,17 @@ def get_simul_by_id(db:Session, key_id:int ):
 
 def get_last_entry(db:Session):
     return db.query(models.Simulation).order_by(models.Simulation.id.desc()).first()
+
+def get_last_csv_filesys(model_name: str):
+
+    os.makedirs(f'./user/results/{model_name}', exist_ok=True)
+    #print(getListOfMdls(os.path.join(os.curdir,'models')))
+    folder_path = f'./user/results/{model_name}'
+    file_type = r'\*csv'
+    files = glob.glob(folder_path + file_type)
+    max_file = max(files, key=os.path.getctime)
+    print('HELLOOOO' + max_file)
+    return(max_file)
 
 def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
 
@@ -116,6 +128,8 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
 
 
     print(f'cur_step={cur_step}')
+
+    save_csv_simulation(model_details) # save csv simulation in filesystem
 
     simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
     model_name = model_details.model_name, 
@@ -245,4 +259,18 @@ def mergeStepDicts(dict_1, dict_2):
     dict_3={}
     for dict_comp in dict_1:
         dict_3[dict_comp] = {**dict_1[dict_comp] , **dict_2[dict_comp]}
-    return dict_3       
+    return dict_3
+
+def save_csv_simulation(model_details):
+    os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
+    #print(getListOfMdls(os.path.join(os.curdir,'models')))
+    csv_path = f'./user/results/{model_details.model_name}/{datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")}.csv'
+    
+    try:
+        f = open(f'./user/results/simulation_state.json')
+    except Exception as e:
+        raise Exception(e)
+
+    df = pd.read_json(f, orient='columns')
+    df.to_csv(csv_path)
+    ### END ###       
