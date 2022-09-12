@@ -120,6 +120,13 @@ def get_csv_results(model_name: str):
 def get_components_values(model_name:str):
     return(crud.get_components_values(model_name=model_name))
 
+@app.get('/get_classrooms')
+def get_classrooms(db: Session = Depends(get_db)):
+    try:
+        db.query(models.Classroom).offset(0).limit(100).all()
+    except: raise HTTPException(status_code=404, detail=f"Error in accessing classroom table in database")
+
+
 @app.post('/add_new_simulation/', response_model=schema.Simulation)
 def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Session = Depends(get_db)):
     return (crud.run_simul(db=db, model_details=simul, step_run=step_run))
@@ -127,6 +134,10 @@ def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Sessio
 @app.post('/save_results', )
 def save_results(simul: schema.Simul_post,db: Session = Depends(get_db)):
     return (crud.save_results(db=db, model_details=simul))
+
+@app.post('/add_classroom',)
+def add_classroom(classroom_name: str, db: Session = Depends(get_db)):
+    crud.add_classroom(db=db,classroom_name=classroom_name )
 
 @app.delete('/delete_simul_by_id/{key_id}', response_description="deleted successfully")
 def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):

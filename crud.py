@@ -252,6 +252,12 @@ def clear_models_table(db: Session):
         except Exception as e:
             raise Exception(e)
 
+def add_classroom(db: Session, classroom_name:str):
+    try:
+        db.add(models.Classroom(id_name = classroom_name)) 
+        db.commit()
+    except Exception as e:
+        raise Exception(e)
 
 ### HELPOUT functions ###
 

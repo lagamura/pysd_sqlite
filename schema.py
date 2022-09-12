@@ -2,7 +2,7 @@ from cgitb import text
 from datetime import datetime
 import json
 import numbers
-from pydantic import BaseModel, Json
+from pydantic import BaseModel, Json, EmailStr, SecretStr
 from typing import(Optional)
 
 class Simulation(BaseModel):
@@ -28,10 +28,15 @@ class Simul_post(BaseModel):
     class Config:
         orm_mode = True
 
-class Models_init(BaseModel):
-    id_name: str
-    namespace: Json
-    docs: Json
+class Student(BaseModel):
+
+    id: int
+    firstname: str
+    surname: str
+    Department: str
+    email = EmailStr
+    password = SecretStr
+
          
 class Get_Simul_by_name(BaseModel):
     simulation_name: str

@@ -1,7 +1,9 @@
 # from xmlrpc.client import DateTime
-from sqlalchemy import Column, Integer, String, JSON, DateTime
+from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey
+from sqlalchemy.orm import declarative_base, relationship
 from database import Base
 from datetime import datetime
+
 
 class Simulation(Base):
 
@@ -26,5 +28,23 @@ class ModelsNamespace(Base):
     namespace = Column(JSON)
     docs = Column(JSON)
 
+class Classroom(Base):
+    __tablename__= "Classrooms"
 
+    id_name = Column(String, primary_key=True)
+    student = relationship("Student")
+
+class Student(Base):
+
+    __tablename__= "Students"
+    id = Column(Integer, primary_key=True)
+    firstname = Column(String)
+    surname = Column(String)
+    Department = Column(String)
+    classroom_id = Column(String, ForeignKey("Classrooms.id_name"))
+    email = Column(String)
+    password = Column(String)
+
+
+    
 
