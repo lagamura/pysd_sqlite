@@ -1,4 +1,3 @@
-from msilib.schema import Component
 import pysd
 import pandas as pd
 import json
