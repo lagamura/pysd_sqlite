@@ -29,19 +29,19 @@ class ModelsNamespace(Base):
     docs = Column(JSON)
 
 class Classroom(Base):
-    __tablename__= "Classrooms"
+    __tablename__= "Classroom"
 
     id_name = Column(String, primary_key=True)
     student = relationship("Student")
 
 class Student(Base):
 
-    __tablename__= "Students"
+    __tablename__= "Student"
     id = Column(Integer, primary_key=True)
     firstname = Column(String)
     surname = Column(String)
     Department = Column(String)
-    classroom_id = Column(String, ForeignKey("Classrooms.id_name"))
+    classroom_id = Column(String, ForeignKey("Classroom.id_name"))
     email = Column(String)
     password = Column(String)
 
