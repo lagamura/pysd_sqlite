@@ -6,7 +6,7 @@ colorama==0.4.4
 dnspython==2.2.1
 email-validator==1.2.1
 et-xmlfile==1.1.0
-fastapi==0.75.2
+fastapi==0.83.0
 greenlet==1.1.2
 gunicorn==20.1.0
 h11==0.13.0
@@ -24,7 +24,7 @@ platformdirs==2.5.2
 portion==2.2.0
 progressbar2==4.0.0
 psycopg2==2.9.3
-pydantic==1.9.0
+pydantic==1.10.2
 pyparsing==3.0.8
 pysd==3.5.2
 python-dateutil==2.8.2
@@ -38,7 +38,7 @@ six==1.16.0
 sniffio==1.2.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.35
-starlette==0.17.1
+starlette==0.19.1
 tomli==2.0.1
 typing_extensions==4.2.0
 uvicorn==0.18.2

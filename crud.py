@@ -1,3 +1,4 @@
+from msilib.schema import Component
 import pysd
 import pandas as pd
 import json
@@ -61,10 +62,9 @@ def get_last_csv_filesys(model_name: str):
     file_type = r'\*csv'
     files = glob.glob(folder_path + file_type)
     max_file = max(files, key=os.path.getctime)
-    print('HELLOOOO' + max_file)
     return(max_file)
 
-def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
+def run_simul(db:Session, model_details: schema.Simulation, step_run: bool):
 
     fileDir = f'./models/{model_details.model_name}'
 
@@ -131,16 +131,13 @@ def run_simul(db:Session, model_details: schema.Simul_post, step_run: bool):
 
     save_csv_simulation(model_details) # save csv simulation in filesystem
 
-    simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
-    model_name = model_details.model_name, 
-    csv_path = None, 
-    json_data = json.dumps(result),
-    params = model_details.params
-    )
 
-    return(simulation_res)
+    #results = json.dumps(result)
+    #print (results)
 
-def save_results(db:Session, model_details: schema.Simul_post):
+    return(result)
+
+def save_results(db:Session, model_details: schema.Simulation):
 
     os.makedirs(f'./user/results/{model_details.model_name}', exist_ok=True)
     #print(getListOfMdls(os.path.join(os.curdir,'models')))
@@ -162,8 +159,9 @@ def save_results(db:Session, model_details: schema.Simul_post):
     simulation_res = models.Simulation(simulation_name= model_details.simulation_name,
     model_name = model_details.model_name, 
     csv_path = csv_path,
-    json_data = json.dumps(result),
-    params = model_details.params
+    results = (result),
+    params = model_details.params,
+    timestamp = datetime.now(tz=None).strftime("%Y_%m_%d-%H_%M_%S")
     )
 
     db.add(simulation_res) 
@@ -195,7 +193,7 @@ def get_csv_by_name(db:Session, name_query:str):
 
 
 def get_all_csvs(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Simulation).offset(skip).limit(limit).all()
+    return db.query(models.Simulation).offset(skip).limit(limit).all() #Does this work?
 
 def get_model_namespace(db: Session, model_name:str):
     try:

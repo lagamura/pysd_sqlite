@@ -57,6 +57,8 @@ def database_init(db:sessionmaker):
     return("Successfull Initialization")
 
 def main():
+
+    models.Base.metadata.create_all(engine)
     
     SessionLocal = sessionmaker(engine)
     with SessionLocal() as session:

@@ -1,8 +1,9 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import JSON
+from sqlalchemy import JSON, select
 import json
+import sys
 
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,6 @@ from database import engine
 #this only needs on initialization
 models.Base.metadata.create_all(bind=engine) ## This already exists in database.py probably should be deleted
 '''
-#models.Base.metadata.create_all(engine)
 
 app = FastAPI(
     title = "Simulation_PySD_Manager",
@@ -26,6 +26,8 @@ app = FastAPI(
     version = "0.0.1",
     #root_path="/api" #this should be fixed
 )
+
+#sys.setrecursionlimit(50)
 
 origins = [
 "*"
@@ -85,7 +87,7 @@ def get_csv_by_id(id:int, db: Session = Depends(get_db)):
 @app.get('/get_simul_res_json/{id}', response_class=JSONResponse)
 def get_simul_res_json(id:int, db: Session = Depends(get_db)):
     row = crud.get_simul_by_id(db=db, key_id=id)
-    content=json.loads(row.json_data) # this needs to be done because we are loading blob data from db
+    content=json.loads(row.results) # this needs to be done because we are loading blob data from db
     return JSONResponse((content))
 
 
@@ -120,24 +122,71 @@ def get_csv_results(model_name: str):
 def get_components_values(model_name:str):
     return(crud.get_components_values(model_name=model_name))
 
-@app.get('/get_classrooms')
+@app.get('/get_classrooms', response_class=JSONResponse)
 def get_classrooms(db: Session = Depends(get_db)):
-    try:
-        db.query(models.Classroom).offset(0).limit(100).all()
-    except: raise HTTPException(status_code=404, detail=f"Error in accessing classroom table in database")
+    class_nameslist = []
+    classrooms = db.query(models.Classroom)
+    
+    for classroom in (classrooms):
+        class_nameslist.append(classroom.id_name)
+
+    return(class_nameslist)
+
+@app.get('/get_students/{classroom_id}')
+def get_students_classroom(classroom_id: str, db: Session = Depends(get_db)):
+
+    res = db.query(models.Student).filter(models.Student.classroom_id == classroom_id).all()
+    print(res)
+    return(res)
+
+@app.get('/get_student/{id}')
+def get_student(id: int):
+    pass
 
 
-@app.post('/add_new_simulation/', response_model=schema.Simulation)
-def add_new_simulation(simul: schema.Simul_post, step_run: bool=False,db: Session = Depends(get_db)):
-    return (crud.run_simul(db=db, model_details=simul, step_run=step_run))
+@app.post('/add_new_simulation/')
+def add_new_simulation(simul: schema.Simulation, step_run: bool=False,db: Session = Depends(get_db)):
+    results = crud.run_simul(db=db, model_details=simul, step_run=step_run)
+    return JSONResponse(results)
 
-@app.post('/save_results', )
-def save_results(simul: schema.Simul_post,db: Session = Depends(get_db)):
+@app.post('/save_results' )
+def save_results(simul: schema.Simulation,db: Session = Depends(get_db)):
     return (crud.save_results(db=db, model_details=simul))
 
-@app.post('/add_classroom',)
+@app.post('/add_classroom')
 def add_classroom(classroom_name: str, db: Session = Depends(get_db)):
     crud.add_classroom(db=db,classroom_name=classroom_name )
+
+@app.post('/add_student')
+def add_student(student: schema.Student, db:Session= Depends(get_db)):
+    _student = models.Student(
+        id = student.id,
+        firstname = student.firstname,
+        surname = student.firstname,
+        department = student.department,
+        classroom_id = student.classroom_id,
+        email = student.email,
+        password = student.password
+    )
+    try:
+        db.add(_student) 
+        db.commit()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Unable to add Student {e}")
+    return(student)
+
+
+@app.delete('/delete_classroom')
+def delete_classroom(classroom_name: str, db: Session = Depends(get_db)):
+
+    try:
+        classroom = db.get(models.Classroom, classroom_name)
+        print(classroom.id_name)
+        db.delete(classroom)
+        db.commit()
+        db.flush()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Unable to delete: {e}")
 
 @app.delete('/delete_simul_by_id/{key_id}', response_description="deleted successfully")
 def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):
