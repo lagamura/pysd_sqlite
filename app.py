@@ -124,19 +124,16 @@ def get_components_values(model_name:str):
 
 @app.get('/get_classrooms', response_class=JSONResponse)
 def get_classrooms(db: Session = Depends(get_db)):
-    class_nameslist = []
-    classrooms = db.query(models.Classroom)
-    
-    for classroom in (classrooms):
-        class_nameslist.append(classroom.id_name)
 
-    return(class_nameslist)
+    classrooms = db.query(models.Classroom).all()
+
+    return(classrooms)
 
 @app.get('/get_students/{classroom_id}')
 def get_students_classroom(classroom_id: str, db: Session = Depends(get_db)):
 
     res = db.query(models.Student).filter(models.Student.classroom_id == classroom_id).all()
-    print(res)
+    #print(res)
     return(res)
 
 @app.get('/get_student/{id}')
@@ -162,7 +159,7 @@ def add_student(student: schema.Student, db:Session= Depends(get_db)):
     _student = models.Student(
         id = student.id,
         firstname = student.firstname,
-        surname = student.firstname,
+        surname = student.surname,
         department = student.department,
         classroom_id = student.classroom_id,
         email = student.email,
@@ -170,6 +167,7 @@ def add_student(student: schema.Student, db:Session= Depends(get_db)):
     )
     try:
         db.add(_student) 
+        db.query(models.Classroom).filter(models.Classroom.id_name == _student.classroom_id).update({'num_students': models.Classroom.num_students + 1})
         db.commit()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Unable to add Student {e}")
@@ -178,10 +176,11 @@ def add_student(student: schema.Student, db:Session= Depends(get_db)):
 
 @app.delete('/delete_classroom')
 def delete_classroom(classroom_name: str, db: Session = Depends(get_db)):
-
+    #print(classroom_name)
     try:
         classroom = db.get(models.Classroom, classroom_name)
-        print(classroom.id_name)
+        #classroom = db.scalars(select(models.Classroom)).first()
+        #print(classroom)
         db.delete(classroom)
         db.commit()
         db.flush()

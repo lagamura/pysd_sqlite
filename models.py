@@ -34,13 +34,13 @@ class Classroom(Base):
 
     id_name = Column(String, primary_key=True)
     students = relationship("Student",back_populates="classroom")
-
+    num_students = Column(Integer,default=0)
 class Student(Base):
 
     __tablename__= "student"
     id = Column(Integer, primary_key=True)
-    firstname = Column(String)
     surname = Column(String)
+    firstname = Column(String)
     department = Column(String)
     classroom_id = Column(String, ForeignKey("classroom.id_name"))
     classroom = relationship("Classroom", back_populates="students")

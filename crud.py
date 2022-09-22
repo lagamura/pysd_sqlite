@@ -251,7 +251,7 @@ def clear_models_table(db: Session):
 
 def add_classroom(db: Session, classroom_name:str):
     try:
-        db.add(models.Classroom(id_name = classroom_name)) 
+        db.add(models.Classroom(id_name = classroom_name, num_students = 0 )) 
         db.commit()
     except Exception as e:
         raise Exception(e)
