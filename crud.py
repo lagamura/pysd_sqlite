@@ -80,10 +80,8 @@ def run_simul(db:Session, model_details: schema.Simulation, step_run: bool):
         model = pysd.read_vensim(model_path)
 
      #cur_step as an integer - (0...1..2...N)
-    if (step_run):
-        cur_step = int((model_details.end_time - model["INITIAL TIME"] - model["TIME STEP"])/model["TIME STEP"])
-    else:
-        cur_step = 0
+    
+    cur_step = int((model_details.end_time - model["INITIAL TIME"] - model["TIME STEP"])/model["TIME STEP"])
 
     print(f'cur_step is:{cur_step}')
     
@@ -91,7 +89,7 @@ def run_simul(db:Session, model_details: schema.Simulation, step_run: bool):
     if (step_run):
         if(cur_step > 0): #path.exists("./user/results/pickles/final_state.pic")
             print(f'N_th run of Simulation:({model_details.start_time}, {model_details.end_time})')
-            df = model.run(initial_condition="./user/results/pickles/final_state.pic", return_timestamps=(model_details.end_time),params=(model_details.params))
+            df = model.run(initial_condition="./user/results/pickles/final_state.pic", return_timestamps=(model_details.start_time, model_details.end_time),params=(model_details.params))
 
         else:
             print(f'1st Run of Simulation:({model["INITIAL TIME"]},{model["TIME STEP"]})')
