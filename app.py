@@ -18,6 +18,9 @@ from models import Student
 ## Authentication
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 SECRET_KEY = "eacb3646506f975025d5d977eb225899c34a5bd28e97de7c17d4bb5b62561215"
 ALGORITHM = "HS256"
@@ -176,6 +179,9 @@ def add_student(student: schema.Student, db:Session= Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"Unable to add Student {e}")
     return(_student)
 
+@app.put('/update_password')
+def update_password(password: str, db: Session = Depends(get_db)):
+    pass
 
 @app.delete('/delete_classroom')
 def delete_classroom(classroom_name: str, db: Session = Depends(get_db)):
@@ -208,8 +214,7 @@ def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):
 @app.delete('/delete_user/{key_id}', response_description="deleted successfully")
 def delete_user(key_id: int, db: Session = Depends(get_db)):
     try:
-
-        query = db.query(Student).filter(Student.id == key_id).delete()
+        db.query(Student).filter(Student.id == key_id).delete()
         db.commit()
 
     except Exception as e:
@@ -218,25 +223,53 @@ def delete_user(key_id: int, db: Session = Depends(get_db)):
 
 
 # Auth
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "fakehashedsecret",
+        "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com",
+        "hashed_password": "fakehashedsecret2",
+        "disabled": True,
+    },
+}
 
 def fake_hash_password(password: str):
     return "fakehashed" + password
 
-class UserInDB(Student):
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: str | None = None
+    full_name: str | None = None
+    disabled: bool | None = None
+
+
+class UserInDB(User):
     hashed_password: str
 
-def get_user(username: str, db: Session = Depends(get_db)):
-    user_dict = db.query(Student).filter(Student.username.contains(username)).first()
-    if (user_dict):
-        print(f"Found username {username} in database")
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
         return UserInDB(**user_dict)
+
 
 def fake_decode_token(token):
     # This doesn't provide any security at all
     # Check the next version
-    user = get_user(token, get_db())
+    user = get_user(fake_users_db, token)
     return user
+
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     user = fake_decode_token(token)
@@ -248,26 +281,24 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         )
     return user
 
+
+
 @app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(),db: Session = Depends(get_db)):    
-    user_orm = db.query(Student).filter(Student.username == form_data.username).first()
-    print(user_orm)
-    if not user_orm:
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db) ):
+    user_dict = db.query(Student).filter(Student.username == form_data.username).first()
+    print(user_dict.password)    
+    if not user_dict:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    user = UserInDB(user_orm.__dict__)
+    # user = UserInDB(**user_dict)
     hashed_password = fake_hash_password(form_data.password)
-    if not hashed_password == user.hashed_password:
+    print(hashed_password)
+    if not hashed_password == user_dict.password:
+        print("Exception in hashed_password")
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    return {"access_token": user.username, "token_type": "bearer"}
+    return {"access_token": user_dict.username, "token_type": "bearer"}
 
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    user = fake_decode_token(token)
-    return user
 
 @app.get("/users/me")
 async def read_users_me(current_user: Student = Depends(get_current_user)):
     return current_user
-

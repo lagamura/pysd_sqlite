@@ -29,8 +29,8 @@ class Student(BaseModel):
     department: str
     classroom_id: str
     username : str
+    password: str
     email : EmailStr 
-    password : str | None
     access_level : str 
 
     class Config:
@@ -43,7 +43,7 @@ class Student(BaseModel):
                 "classroom_id": "ECE_101",
                 "username": "slagaras",
                 "email": "stelioslagaras@gmail.com",
-                "password": "hiddentypepass",
+                "password": "secret", #ayto mallon skai bug
                 "access_level": "student"
             }
         }
@@ -63,13 +63,19 @@ class Models(BaseModel):
 
 ## Authentication part
 
+# class User(BaseModel):
+#     username: str
+#     email: str | None = None
+#     full_name: str | None = None
+#     disabled: bool | None = None
+
+
+# class UserInDB(User):
+#     hashed_password: str
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-
 class TokenData(BaseModel):
     username: str | None = None
-
-class UserInDB(Student):
-    hashed_password: str
