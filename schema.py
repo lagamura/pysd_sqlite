@@ -46,7 +46,7 @@ class Student(BaseModel):
                 "password": "hiddentypepass",
                 "access_level": "student"
             }
-        },
+        }
         orm_mode = True
         
 
