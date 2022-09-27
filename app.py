@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import JSON, select
@@ -12,8 +12,19 @@ import crud, models, schema
 
 from database import SessionLocal, engine
 
+from models import Student
+
+
+## Authentication
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+SECRET_KEY = "eacb3646506f975025d5d977eb225899c34a5bd28e97de7c17d4bb5b62561215"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+##
 '''
-import models
 from database import engine
 
 #this only needs on initialization
@@ -156,22 +167,14 @@ def add_classroom(classroom_name: str, db: Session = Depends(get_db)):
 
 @app.post('/add_student')
 def add_student(student: schema.Student, db:Session= Depends(get_db)):
-    _student = models.Student(
-        id = student.id,
-        firstname = student.firstname,
-        surname = student.surname,
-        department = student.department,
-        classroom_id = student.classroom_id,
-        email = student.email,
-        password = student.password
-    )
+    _student = Student(**student.dict())
     try:
         db.add(_student) 
         db.query(models.Classroom).filter(models.Classroom.id_name == _student.classroom_id).update({'num_students': models.Classroom.num_students + 1})
         db.commit()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Unable to add Student {e}")
-    return(student)
+    return(_student)
 
 
 @app.delete('/delete_classroom')
@@ -201,3 +204,70 @@ def delete_simul_by_id(key_id:int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Unable to delete: {e}")
     return {"delete status": "success"}
+
+@app.delete('/delete_user/{key_id}', response_description="deleted successfully")
+def delete_user(key_id: int, db: Session = Depends(get_db)):
+    try:
+
+        query = db.query(Student).filter(Student.id == key_id).delete()
+        db.commit()
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Unable to delete: {e}")
+    return {"delete status": "success"}
+
+
+# Auth
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def fake_hash_password(password: str):
+    return "fakehashed" + password
+
+class UserInDB(Student):
+    hashed_password: str
+
+def get_user(username: str, db: Session = Depends(get_db)):
+    user_dict = db.query(Student).filter(Student.username.contains(username)).first()
+    if (user_dict):
+        print(f"Found username {username} in database")
+        return UserInDB(**user_dict)
+
+def fake_decode_token(token):
+    # This doesn't provide any security at all
+    # Check the next version
+    user = get_user(token, get_db())
+    return user
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends(),db: Session = Depends(get_db)):    
+    user_orm = db.query(Student).filter(Student.username == form_data.username).first()
+    print(user_orm)
+    if not user_orm:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    user = UserInDB(user_orm.__dict__)
+    hashed_password = fake_hash_password(form_data.password)
+    if not hashed_password == user.hashed_password:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    return {"access_token": user.username, "token_type": "bearer"}
+
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    return user
+
+@app.get("/users/me")
+async def read_users_me(current_user: Student = Depends(get_current_user)):
+    return current_user
+

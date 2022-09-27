@@ -21,22 +21,6 @@ class Simulation(BaseModel):
         orm_mode = True
 
 
-
-    class Config:
-        orm_mode = True
-
-
-# class Simul_post(BaseModel):
-#     user: str
-#     timestamp: datetime
-#     model_name: str
-#     simulation_name: str | None
-#     params: dict | None #this is an object of key-value pairs. Maybe should be changed
-#     start_time: float
-#     end_time: float
-#     class Config:
-#         orm_mode = True
-
 class Student(BaseModel):
 
     id: int
@@ -44,8 +28,10 @@ class Student(BaseModel):
     surname: str
     department: str
     classroom_id: str
+    username : str
     email : EmailStr 
     password : str | None
+    access_level : str 
 
     class Config:
         schema_extra = {
@@ -55,10 +41,13 @@ class Student(BaseModel):
                 "surname": "Lagaras",
                 "department": "e-ce",
                 "classroom_id": "ECE_101",
+                "username": "slagaras",
                 "email": "stelioslagaras@gmail.com",
-                "password": "hiddentypepass"
+                "password": "hiddentypepass",
+                "access_level": "student"
             }
-        }
+        },
+        orm_mode = True
         
 
          
@@ -71,3 +60,16 @@ class Get_Simul_by_name(BaseModel):
 class Models(BaseModel):
     id_name: str
     namespace: Json
+
+## Authentication part
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+class UserInDB(Student):
+    hashed_password: str
