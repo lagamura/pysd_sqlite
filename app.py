@@ -12,7 +12,7 @@ import crud, models, schema
 
 from database import SessionLocal, engine
 
-from models import Student
+from models import *
 
 
 ## Authentication
@@ -21,6 +21,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from datetime import datetime, timedelta
 
 SECRET_KEY = "eacb3646506f975025d5d977eb225899c34a5bd28e97de7c17d4bb5b62561215"
 ALGORITHM = "HS256"
@@ -170,7 +171,8 @@ def add_classroom(classroom_name: str, db: Session = Depends(get_db)):
 
 @app.post('/add_student')
 def add_student(student: schema.Student, db:Session= Depends(get_db)):
-    _student = Student(**student.dict())
+    _student = Student(**student.dict(exclude={'password'}))
+    _student.password = get_password_hash(student.password)
     try:
         db.add(_student) 
         db.query(models.Classroom).filter(models.Classroom.id_name == _student.classroom_id).update({'num_students': models.Classroom.num_students + 1})
@@ -223,81 +225,88 @@ def delete_user(key_id: int, db: Session = Depends(get_db)):
 
 
 # Auth
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "fakehashedsecret",
-        "disabled": False,
-    },
-    "alice": {
-        "username": "alice",
-        "full_name": "Alice Wonderson",
-        "email": "alice@example.com",
-        "hashed_password": "fakehashedsecret2",
-        "disabled": True,
-    },
-}
 
-def fake_hash_password(password: str):
-    return "fakehashed" + password
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-class User(BaseModel):
-    username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
 
-class UserInDB(User):
-    hashed_password: str
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
+
+def get_user(username: str, db: Session) -> Student:
+    res = db.query(Student).filter(Student.username == username).first()
+    if res:
+        return (res)
+    else :  raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
-def fake_decode_token(token):
-    # This doesn't provide any security at all
-    # Check the next version
-    user = get_user(fake_users_db, token)
+def authenticate_user(username: str, password: str, db: Session ):
+    user = get_user(username, db)
+    if not user:
+        return False
+    if not verify_password(password, user.password):
+        return False
+    return user
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = schema.TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    user = get_user(db ,username=token_data.username)
+    if user is None:
+        raise credentials_exception
     return user
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    user = fake_decode_token(token)
+
+@app.post("/token", response_model=schema.Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),  db: Session = Depends(get_db)):
+    user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return user
-
-
-
-@app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db) ):
-    user_dict = db.query(Student).filter(Student.username == form_data.username).first()
-    print(user_dict.password)    
-    if not user_dict:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    # user = UserInDB(**user_dict)
-    hashed_password = fake_hash_password(form_data.password)
-    print(hashed_password)
-    if not hashed_password == user_dict.password:
-        print("Exception in hashed_password")
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-
-    return {"access_token": user_dict.username, "token_type": "bearer"}
-
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer", "username": user.username}
 
 @app.get("/users/me")
 async def read_users_me(current_user: Student = Depends(get_current_user)):
