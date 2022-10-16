@@ -23,11 +23,12 @@ class Simulation(Base):
 
 class ModelsNamespace(Base):
 
-    __tablename__= "models"
+    __tablename__= "models_table"
 
     id_name = Column(String, primary_key=True)
     namespace = Column(JSON)
     docs = Column(JSON)
+    vars_exposed = Column(JSON)
 
 class Classroom(Base):
     __tablename__= "classroom"

@@ -1,7 +1,7 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status, Body
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import JSON, select
+from sqlalchemy import JSON, select, update
 import json
 import sys
 
@@ -121,9 +121,16 @@ def get_csv_by_name(simul: schema.Get_Simul_by_name, db: Session = Depends(get_d
 def get_model_namespace(model_name:str, db: Session = Depends(get_db) ):
     return(crud.get_model_namespace(db=db, model_name=model_name))
 
+@app.get('/get_vars_exposed/{model_name}', response_class=JSONResponse)
+def get_vars_exposed(model_name:str, db: Session = Depends(get_db) ):
+    q = db.query(ModelsNamespace).get(model_name)
+    return((q.vars_exposed))
+
+
 @app.get('/get_model_docs/{model_name}', response_class=JSONResponse)
 def get_model_docs(model_name:str, db: Session = Depends(get_db)):
-    return(json.loads(crud.get_model_docs(db=db, model_name=model_name)))
+    res = crud.get_model_docs(db=db, model_name=model_name)
+    return(json.loads(res))
 
 @app.get('/get_csv_results/{model_name}', response_class=FileResponse)
 def get_csv_results(model_name: str):
@@ -311,3 +318,11 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @app.get("/users/me")
 async def read_users_me(current_user: Student = Depends(get_current_user)):
     return current_user
+
+@app.put("/update_vars_exposed/{model_name}")
+def update_vars_exposed(model_name: str, vars_updated:dict = Body(), db: Session = Depends(get_db)):
+    x = db.query(ModelsNamespace).get(model_name)
+    # print(f"Vars Exposed: {vars_updated}")
+    x.vars_exposed = vars_updated #update this
+    db.commit()
+    

@@ -196,7 +196,7 @@ def get_model_namespace(db: Session, model_name:str):
     try:
         res = db.query(models.ModelsNamespace).get(model_name)
         if res:
-            return(res.namespace)
+            return(res)
     except Exception as e:
         raise Exception(e)
 
