@@ -123,13 +123,14 @@ def get_model_namespace(model_name:str, db: Session = Depends(get_db) ):
 
 @app.get('/get_vars_exposed/{model_name}', response_class=JSONResponse)
 def get_vars_exposed(model_name:str, db: Session = Depends(get_db) ):
-    q = db.query(ModelsNamespace).get(model_name)
+    q = db.query(ModelsNamespace).get(model_name.capitalize())
     return((q.vars_exposed))
 
 
 @app.get('/get_model_docs/{model_name}', response_class=JSONResponse)
 def get_model_docs(model_name:str, db: Session = Depends(get_db)):
     res = crud.get_model_docs(db=db, model_name=model_name)
+    #print(res) #lets see...
     return(json.loads(res))
 
 @app.get('/get_csv_results/{model_name}', response_class=FileResponse)

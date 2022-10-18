@@ -202,7 +202,7 @@ def get_model_namespace(db: Session, model_name:str):
 
 def get_model_docs(db: Session, model_name:str):
     try:
-        res = db.query(models.ModelsNamespace).get(model_name)
+        res = db.query(models.ModelsNamespace).get(model_name.capitalize()) # BUG Models are with Capital e.x. Climate not climate
         if res:
             return(res.docs)
     except Exception as e:
