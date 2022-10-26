@@ -49,7 +49,7 @@ class Student(Base):
     classroom = relationship("Classroom", back_populates="students")
     email = Column(String)
     password = Column(String)
-    access_level = Column(String)
+    access_level = Column(String, default="user_access")
 
 
 

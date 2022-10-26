@@ -4,6 +4,7 @@ import json
 import numbers
 from pydantic import BaseModel, Json, EmailStr, SecretStr
 from typing import(Optional)
+from enum import Enum
 
 class Simulation(BaseModel):
     id: int | None
@@ -20,6 +21,9 @@ class Simulation(BaseModel):
     class Config:
         orm_mode = True
 
+class AdminEnum(str, Enum):
+    user_access="user_access"
+    admin_access="admin_access"
 
 class Student(BaseModel):
 
@@ -31,7 +35,7 @@ class Student(BaseModel):
     username : str
     password: str
     email : EmailStr 
-    access_level : str 
+    access_level : AdminEnum | None
 
     class Config:
         schema_extra = {
@@ -44,7 +48,7 @@ class Student(BaseModel):
                 "username": "slagaras",
                 "email": "stelioslagaras@gmail.com",
                 "password": "secret", #ayto mallon skai bug
-                "access_level": "student"
+                "access_level": AdminEnum.user_access
             }
         }
         orm_mode = True

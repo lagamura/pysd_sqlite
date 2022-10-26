@@ -249,7 +249,7 @@ def get_password_hash(password):
 
 
 
-def get_user(username: str, db: Session) -> Student:
+def get_user(db: Session, username: str ) -> Student:
     res = db.query(Student).filter(Student.username == username).first()
     if res:
         return (res)
@@ -261,10 +261,12 @@ def get_user(username: str, db: Session) -> Student:
 
 
 def authenticate_user(username: str, password: str, db: Session ):
-    user = get_user(username, db)
+    user = get_user(db,username)
     if not user:
+        print("Username has not found")
         return False
     if not verify_password(password, user.password):
+        print("Password is incorrect")
         return False
     return user
 
@@ -294,6 +296,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         token_data = schema.TokenData(username=username)
     except JWTError:
         raise credentials_exception
+
     user = get_user(db ,username=token_data.username)
     if user is None:
         raise credentials_exception
@@ -318,6 +321,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @app.get("/users/me")
 async def read_users_me(current_user: Student = Depends(get_current_user)):
+    del current_user.password
     return current_user
 
 @app.put("/update_vars_exposed/{model_name}")
